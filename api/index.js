@@ -242,6 +242,7 @@ app.post('/api/pins', async (req, res) => {
       status: 'pending',
       threadCount: 0,
       photo: req.body.photo || null,
+      photos: req.body.photos || (req.body.photo ? [req.body.photo] : []),
       createdAt: new Date()
     };
 
@@ -257,6 +258,7 @@ app.post('/api/pins', async (req, res) => {
       location: req.body.address || 'Unknown Location',
       status: 'pending',
       photo: req.body.photo || null,
+      photos: req.body.photos || (req.body.photo ? [req.body.photo] : []),
       pinId: result.insertedId
     };
     await db.collection('reports').insertOne(userReport);

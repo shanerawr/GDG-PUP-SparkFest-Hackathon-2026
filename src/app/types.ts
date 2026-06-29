@@ -17,7 +17,8 @@ export interface MapPin {
   description: string;
   status: ReportStatus;
   threadCount: number;
-  photo?: string;
+  photo?: string; // Kept for backwards compatibility
+  photos?: string[];
 }
 
 export interface SavedRoute {

@@ -75,7 +75,7 @@ export function AddReportModal({ onClose, onSubmit }: Props) {
   const [address, setAddress] = useState('');
   const [description, setDescription] = useState('');
   const [submitted, setSubmitted] = useState(false);
-  const [photo, setPhoto] = useState<string | null>(null);
+  const [photos, setPhotos] = useState<string[]>([]);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [isMapPickerOpen, setIsMapPickerOpen] = useState(false);
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
@@ -108,7 +108,7 @@ export function AddReportModal({ onClose, onSubmit }: Props) {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setPhoto(reader.result as string);
+        setPhotos(prev => [...prev, reader.result as string]);
       };
       reader.readAsDataURL(file);
     }
@@ -127,7 +127,7 @@ export function AddReportModal({ onClose, onSubmit }: Props) {
         description,
         lat,
         lng,
-        ...(photo && { photo }) // Only include if present
+        photos
       } as any); // using any to bypass strict type check here, will update App.tsx
     }, 1800);
   };
@@ -238,37 +238,40 @@ export function AddReportModal({ onClose, onSubmit }: Props) {
               {/* ── Photo Upload ── */}
               <div>
                 <SectionLabel>Photo Upload</SectionLabel>
-                {photo ? (
-                  <div className="relative h-[120px] rounded-xl overflow-hidden border border-gray-200">
-                    <img src={photo} alt="Uploaded" className="w-full h-full object-cover" />
-                    <button 
-                      onClick={() => setPhoto(null)}
-                      className="absolute top-2 right-2 w-7 h-7 bg-white/90 shadow-sm rounded-full flex items-center justify-center text-gray-700 hover:bg-white"
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex gap-2">
+                <div className="flex gap-2 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
+                  {photos.map((p, idx) => (
+                    <div key={idx} className="relative inline-block border border-gray-200 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
+                      <img src={p} alt="Uploaded" className="h-[120px] w-auto max-w-full object-contain" />
+                      <button 
+                        onClick={() => setPhotos(prev => prev.filter((_, i) => i !== idx))}
+                        className="absolute top-1 right-1 w-6 h-6 bg-black/50 shadow-sm rounded-full flex items-center justify-center text-white hover:bg-black/70 transition-colors"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ))}
+                  
+                  {/* Upload Buttons */}
+                  <div className="flex gap-2 flex-shrink-0">
                     <button 
                       type="button" 
                       onClick={() => setIsCameraOpen(true)}
-                      className="flex-1 flex flex-col items-center justify-center gap-2 px-2 py-4 rounded-xl bg-gray-50 border border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors"
+                      className="flex flex-col items-center justify-center gap-1.5 px-3 py-2 h-[120px] rounded-xl bg-gray-50 border border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors"
                     >
                       <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-blue-600 shadow-sm border border-gray-100">
                         <Camera size={18} />
                       </div>
-                      <span className="text-[13px] font-bold text-gray-900">Take Photo</span>
+                      <span className="text-[12px] font-bold text-gray-900">Take Photo</span>
                     </button>
-                    <label className="flex-1 flex flex-col items-center justify-center gap-2 px-2 py-4 rounded-xl bg-gray-50 border border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors">
+                    <label className="flex flex-col items-center justify-center gap-1.5 px-3 py-2 h-[120px] rounded-xl bg-gray-50 border border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors">
                       <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
                       <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-blue-600 shadow-sm border border-gray-100">
                         <ImageIcon size={18} />
                       </div>
-                      <span className="text-[13px] font-bold text-gray-900">Gallery</span>
+                      <span className="text-[12px] font-bold text-gray-900">Gallery</span>
                     </label>
                   </div>
-                )}
+                </div>
               </div>
 
               {/* ── Description ── */}
@@ -324,7 +327,7 @@ export function AddReportModal({ onClose, onSubmit }: Props) {
         {isCameraOpen && (
           <CameraView 
             onCapture={(dataUrl) => {
-              setPhoto(dataUrl);
+              setPhotos(prev => [...prev, dataUrl]);
               setIsCameraOpen(false);
             }} 
             onClose={() => setIsCameraOpen(false)} 

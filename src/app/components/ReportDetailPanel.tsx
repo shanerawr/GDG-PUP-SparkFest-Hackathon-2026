@@ -30,6 +30,9 @@ export function ReportDetailPanel({ pin, onClose, currentUser, onCommentAdded, o
 
   const { bg, label: hazardLabel } = HAZARD_COLORS[pin.hazardLevel];
   const { label: statusLabel, Icon: StatusIcon, color: statusColor } = statusConfig[pinStatus];
+  
+  const allPhotos = pin.photos?.length ? pin.photos : (pin.photo ? [pin.photo] : []);
+  const heroPhoto = allPhotos[0] || null;
 
   const handleStatusChange = (newStatus: ReportStatus) => {
     if (!currentUser) return;
@@ -124,8 +127,8 @@ export function ReportDetailPanel({ pin, onClose, currentUser, onCommentAdded, o
     >
       {/* Hero image */}
       <div className="relative flex-shrink-0" style={{ height: 220 }}>
-        {pin.photo ? (
-          <img src={pin.photo} alt={pin.title} className="w-full h-full object-cover" />
+        {heroPhoto ? (
+          <img src={heroPhoto} alt={pin.title} className="w-full h-full object-cover" />
         ) : (
           <LandscapeThumb className="w-full h-full" />
         )}
@@ -281,11 +284,13 @@ export function ReportDetailPanel({ pin, onClose, currentUser, onCommentAdded, o
           </div>
 
           {/* Photo thumbnails */}
-          {pin.photo ? (
+          {allPhotos.length > 0 ? (
             <>
               <p className="text-[12px] font-bold text-gray-400 uppercase tracking-wider mb-2 mt-4">Photos</p>
-              <div className="flex gap-2 mb-5">
-                <img src={pin.photo} alt="Thumbnail" className="w-[120px] h-20 object-cover rounded-xl border border-gray-200" />
+              <div className="flex gap-2 mb-5 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
+                {allPhotos.map((p, idx) => (
+                  <img key={idx} src={p} alt={`Thumbnail ${idx + 1}`} className="w-[120px] h-20 object-cover rounded-xl border border-gray-200 flex-shrink-0" />
+                ))}
               </div>
             </>
           ) : (

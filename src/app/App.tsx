@@ -131,7 +131,7 @@ export default function App() {
     }
   };
 
-  const handleAddReportSubmit = (reportData: { type: string; address: string; description: string; lat: number; lng: number; photo?: string }) => {
+  const handleAddReportSubmit = (reportData: { type: string; address: string; description: string; lat: number; lng: number; photo?: string; photos?: string[] }) => {
     fetch('/api/pins', {
       method: 'POST',
       headers: {
