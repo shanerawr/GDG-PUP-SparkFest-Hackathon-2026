@@ -294,6 +294,7 @@ export default function App() {
               onClose={() => setDetailPin(null)}
               currentUser={currentUser}
               onCommentAdded={fetchNotifications}
+              onStatusUpdated={fetchPins}
             />
           )}
         </AnimatePresence>

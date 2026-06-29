@@ -158,6 +158,30 @@ async function seedDatabase() {
     await db.collection('notifications').insertMany(initialNotifications);
     console.log("Seeded initial notifications data");
   }
+
+  // Seed default admin account
+  const adminExists = await db.collection('accounts').findOne({ username: 'admin' });
+  if (!adminExists) {
+    await db.collection('accounts').insertOne({
+      username: 'admin',
+      displayName: 'System Admin',
+      password: 'admin',
+      role: 'admin',
+      isVerified: true,
+      verificationStatus: 'verified',
+      createdAt: new Date(),
+      reportsCount: 0,
+      upvotesCount: 0,
+      joinedDate: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+      notifSettings: {
+        pushEnabled: true,
+        newPinNearby: true,
+        replyReceived: true,
+        upvotesOnPost: true
+      }
+    });
+    console.log("Seeded initial admin account");
+  }
 }
 
 // Middleware to ensure database connection in serverless environment
@@ -393,6 +417,7 @@ app.post('/api/accounts/profile', async (req, res) => {
         createdAt: new Date(),
         isVerified: false,
         verificationStatus: 'unverified',
+        role: 'citizen',
         reportsCount: 0,
         upvotesCount: 0,
         joinedDate: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
@@ -427,6 +452,7 @@ app.post('/api/accounts/profile', async (req, res) => {
       // Ensure defaults exist for existing accounts
       account.id = account._id.toString();
       account.displayName = account.displayName || account.username;
+      account.role = account.role || 'citizen';
       account.isVerified = account.isVerified !== undefined ? account.isVerified : false;
       account.verificationStatus = account.verificationStatus || 'unverified';
       account.reportsCount = account.reportsCount !== undefined ? account.reportsCount : 0;
@@ -468,6 +494,105 @@ app.put('/api/accounts/profile', async (req, res) => {
     if (!result) return res.status(404).json({ error: "Account not found" });
     const formatted = { ...result, id: result._id.toString() };
     res.json(formatted);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Admin creates authority/LGU accounts
+app.post('/api/accounts/create-authority', async (req, res) => {
+  try {
+    const { adminUsername, username, displayName, password, role, governmentCategory } = req.body;
+    
+    // Check if requester is admin
+    const requester = await db.collection('accounts').findOne({ username: adminUsername, role: 'admin' });
+    if (!requester) {
+      return res.status(200).json({ error: "Only admins can create authority/LGU accounts." });
+    }
+    
+    const cleanUsername = username.toLowerCase().replace(/\s+/g, '').trim();
+    const existing = await db.collection('accounts').findOne({ username: cleanUsername });
+    if (existing) {
+      return res.status(200).json({ error: "Username already taken." });
+    }
+    
+    if (!['authority', 'lgu'].includes(role)) {
+      return res.status(200).json({ error: "Invalid role. Must be 'authority' or 'lgu'." });
+    }
+    
+    const newAccount = {
+      username: cleanUsername,
+      displayName: displayName || cleanUsername.charAt(0).toUpperCase() + cleanUsername.slice(1),
+      password: password || '123456',
+      role: role,
+      governmentCategory: governmentCategory || 'LGU',
+      isVerified: true,
+      verificationStatus: 'verified',
+      createdAt: new Date(),
+      reportsCount: 0,
+      upvotesCount: 0,
+      joinedDate: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+      notifSettings: {
+        pushEnabled: true,
+        newPinNearby: true,
+        replyReceived: true,
+        upvotesOnPost: true
+      }
+    };
+    
+    const result = await db.collection('accounts').insertOne(newAccount);
+    newAccount.id = result.insertedId.toString();
+    res.status(201).json(newAccount);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Admin fetches created authority/LGU accounts
+app.get('/api/accounts/authorities', async (req, res) => {
+  try {
+    const { adminUsername } = req.query;
+    const requester = await db.collection('accounts').findOne({ username: adminUsername, role: 'admin' });
+    if (!requester) {
+      return res.status(200).json({ error: "Access denied. Only admins can view this list." });
+    }
+    const list = await db.collection('accounts').find({ role: { $in: ['authority', 'lgu'] } }).toArray();
+    res.json(list.map(u => ({ ...u, id: u._id.toString() })));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Update pin status (Authority/LGU responder role feature)
+app.put('/api/pins/:id/status', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, username } = req.body;
+
+    // Verify user is authority/LGU/admin
+    const user = await db.collection('accounts').findOne({ username });
+    if (!user || !['authority', 'lgu', 'admin'].includes(user.role)) {
+      return res.status(200).json({ error: "Access denied. Only authorities or LGU responders can change status." });
+    }
+    
+    if (!['pending', 'acknowledged', 'in-progress', 'resolved'].includes(status)) {
+      return res.status(200).json({ error: "Invalid status value" });
+    }
+    
+    const pin = await db.collection('pins').findOneAndUpdate(
+      { _id: new ObjectId(id) },
+      { $set: { status } },
+      { returnDocument: 'after' }
+    );
+    if (!pin) return res.status(200).json({ error: "Pin not found" });
+    
+    // Also update corresponding reports collection status
+    await db.collection('reports').updateMany(
+      { pinId: new ObjectId(id) },
+      { $set: { status } }
+    );
+
+    res.json({ ...pin, id: pin._id.toString() });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -561,11 +686,13 @@ app.get('/api/pins/:id/comments', async (req, res) => {
 app.post('/api/pins/:id/comments', async (req, res) => {
   try {
     const { id } = req.params;
-    const { author, content } = req.body;
+    const { author, content, role, governmentCategory } = req.body;
     const newComment = {
       pinId: id,
       author: author || 'anonymous',
       content,
+      role: author === 'bayan_patrol' ? 'authority' : (role || 'citizen'),
+      governmentCategory: author === 'bayan_patrol' ? 'DRRMO' : (governmentCategory || ''),
       createdAt: new Date(),
       timeAgo: 'Just now'
     };
