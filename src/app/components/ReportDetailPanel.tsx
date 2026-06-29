@@ -124,7 +124,11 @@ export function ReportDetailPanel({ pin, onClose, currentUser, onCommentAdded, o
     >
       {/* Hero image */}
       <div className="relative flex-shrink-0" style={{ height: 220 }}>
-        <LandscapeThumb className="w-full h-full" />
+        {pin.photo ? (
+          <img src={pin.photo} alt={pin.title} className="w-full h-full object-cover" />
+        ) : (
+          <LandscapeThumb className="w-full h-full" />
+        )}
         {/* Close button over image */}
         <button
           onClick={onClose}
@@ -277,11 +281,22 @@ export function ReportDetailPanel({ pin, onClose, currentUser, onCommentAdded, o
           </div>
 
           {/* Photo thumbnails */}
-          <p className="text-[12px] font-bold text-gray-400 uppercase tracking-wider mb-2 mt-4">Photos</p>
-          <div className="flex gap-2 mb-5">
-            <LandscapeThumb className="flex-1 rounded-xl" style={{ height: 80 } as React.CSSProperties} />
-            <LandscapeThumb className="flex-1 rounded-xl" style={{ height: 80 } as React.CSSProperties} />
-          </div>
+          {pin.photo ? (
+            <>
+              <p className="text-[12px] font-bold text-gray-400 uppercase tracking-wider mb-2 mt-4">Photos</p>
+              <div className="flex gap-2 mb-5">
+                <img src={pin.photo} alt="Thumbnail" className="w-[120px] h-20 object-cover rounded-xl border border-gray-200" />
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-[12px] font-bold text-gray-400 uppercase tracking-wider mb-2 mt-4">Photos</p>
+              <div className="flex gap-2 mb-5">
+                <LandscapeThumb className="flex-1 rounded-xl" style={{ height: 80 } as React.CSSProperties} />
+                <LandscapeThumb className="flex-1 rounded-xl" style={{ height: 80 } as React.CSSProperties} />
+              </div>
+            </>
+          )}
 
           {/* Divider */}
           <div className="h-px bg-gray-100 mb-4" />

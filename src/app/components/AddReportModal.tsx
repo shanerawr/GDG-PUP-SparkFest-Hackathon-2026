@@ -4,6 +4,7 @@ import {
   MapPin, Pencil, RotateCcw, CheckCircle, ImageIcon,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { CameraView } from './CameraView';
 
 interface Props {
   onClose: () => void;
@@ -66,33 +67,26 @@ function SmallMapPreview({ showBluePin = false }: { showBluePin?: boolean }) {
   );
 }
 
-function PhotoSlot({ hasPhoto, index }: { hasPhoto: boolean; index: number }) {
-  if (hasPhoto) {
-    return (
-      <div className="flex-1 aspect-square rounded-xl overflow-hidden border border-gray-200 flex-shrink-0">
-        {/* Simulated flood photo */}
-        <div className="w-full h-full relative" style={{ background: '#4a7fb5' }}>
-          <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, #87CEEB 0%, #5b9bd5 40%, #2c6fa8 100%)' }} />
-          <div className="absolute bottom-0 left-0 right-0" style={{ height: '30%', background: 'rgba(0,80,180,0.4)' }} />
-        </div>
-      </div>
-    );
-  }
-  return (
-    <div className="flex-1 aspect-square rounded-xl bg-gray-100 border border-gray-200 flex items-center justify-center flex-shrink-0">
-      {index % 2 === 0
-        ? <Camera size={18} className="text-gray-400" />
-        : <ImageIcon size={18} className="text-gray-400" />
-      }
-    </div>
-  );
-}
+
 
 export function AddReportModal({ onClose, onSubmit }: Props) {
   const [category, setCategory] = useState('fallen-pole');
   const [address, setAddress] = useState('');
   const [description, setDescription] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [photo, setPhoto] = useState<string | null>(null);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPhoto(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSubmit = () => {
     setSubmitted(true);
@@ -106,8 +100,9 @@ export function AddReportModal({ onClose, onSubmit }: Props) {
         address: address || 'Manila',
         description,
         lat,
-        lng
-      });
+        lng,
+        ...(photo && { photo }) // Only include if present
+      } as any); // using any to bypass strict type check here, will update App.tsx
     }, 1800);
   };
 
@@ -210,13 +205,37 @@ export function AddReportModal({ onClose, onSubmit }: Props) {
               {/* ── Photo Upload ── */}
               <div>
                 <SectionLabel>Photo Upload</SectionLabel>
-                <div className="flex gap-2">
-                  <PhotoSlot hasPhoto={false} index={0} />
-                  <PhotoSlot hasPhoto={false} index={1} />
-                  <PhotoSlot hasPhoto={true} index={2} />
-                  <PhotoSlot hasPhoto={false} index={3} />
-                  <PhotoSlot hasPhoto={false} index={4} />
-                </div>
+                {photo ? (
+                  <div className="relative h-[120px] rounded-xl overflow-hidden border border-gray-200">
+                    <img src={photo} alt="Uploaded" className="w-full h-full object-cover" />
+                    <button 
+                      onClick={() => setPhoto(null)}
+                      className="absolute top-2 right-2 w-7 h-7 bg-white/90 shadow-sm rounded-full flex items-center justify-center text-gray-700 hover:bg-white"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <button 
+                      type="button" 
+                      onClick={() => setIsCameraOpen(true)}
+                      className="flex-1 flex flex-col items-center justify-center gap-2 px-2 py-4 rounded-xl bg-gray-50 border border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-blue-600 shadow-sm border border-gray-100">
+                        <Camera size={18} />
+                      </div>
+                      <span className="text-[13px] font-bold text-gray-900">Take Photo</span>
+                    </button>
+                    <label className="flex-1 flex flex-col items-center justify-center gap-2 px-2 py-4 rounded-xl bg-gray-50 border border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors">
+                      <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+                      <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-blue-600 shadow-sm border border-gray-100">
+                        <ImageIcon size={18} />
+                      </div>
+                      <span className="text-[13px] font-bold text-gray-900">Gallery</span>
+                    </label>
+                  </div>
+                )}
               </div>
 
               {/* ── Description ── */}
@@ -265,6 +284,18 @@ export function AddReportModal({ onClose, onSubmit }: Props) {
               </button>
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isCameraOpen && (
+          <CameraView 
+            onCapture={(dataUrl) => {
+              setPhoto(dataUrl);
+              setIsCameraOpen(false);
+            }} 
+            onClose={() => setIsCameraOpen(false)} 
+          />
         )}
       </AnimatePresence>
     </motion.div>
