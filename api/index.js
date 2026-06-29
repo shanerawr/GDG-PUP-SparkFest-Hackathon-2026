@@ -778,7 +778,7 @@ app.get('/api/pins/:id/comments', async (req, res) => {
 app.post('/api/pins/:id/comments', async (req, res) => {
   try {
     const { id } = req.params;
-    const { author, content, role, governmentCategory } = req.body;
+    const { author, content, role, governmentCategory, parentId } = req.body;
     const newComment = {
       pinId: id,
       author: author || 'anonymous',
@@ -786,8 +786,14 @@ app.post('/api/pins/:id/comments', async (req, res) => {
       role: author === 'bayan_patrol' ? 'authority' : (role || 'citizen'),
       governmentCategory: author === 'bayan_patrol' ? 'DRRMO' : (governmentCategory || ''),
       createdAt: new Date(),
-      timeAgo: 'Just now'
+      timeAgo: 'Just now',
+      upvotes: 0,
+      downvotes: 0,
+      flags: 0
     };
+    if (parentId) {
+      newComment.parentId = parentId;
+    }
     const result = await db.collection('comments').insertOne(newComment);
     
     // Increment threadCount on pin
@@ -798,14 +804,34 @@ app.post('/api/pins/:id/comments', async (req, res) => {
 
     // Get the pin author to notify them
     const pin = await db.collection('pins').findOne({ _id: new ObjectId(id) });
-    if (pin && pin.reportedBy && pin.reportedBy !== author) {
+    
+    // If it's a nested reply, notify the parent comment's author
+    if (parentId) {
+      const parentComment = await db.collection('comments').findOne({ _id: new ObjectId(parentId) });
+      if (parentComment && parentComment.author !== author) {
+        const parentAuthorAccount = await db.collection('accounts').findOne({ username: parentComment.author });
+        if (!parentAuthorAccount || parentAuthorAccount.notifSettings?.replyReceived !== false) {
+          await db.collection('notifications').insertOne({
+            targetUser: parentComment.author,
+            type: 'reply',
+            isNew: true,
+            title: `@${author} replied to your comment`,
+            subtitle: pin ? pin.title : 'Report Details',
+            detail: content,
+            timeAgo: 'Just now',
+            createdAt: new Date()
+          });
+        }
+      }
+    } else if (pin && pin.reportedBy && pin.reportedBy !== author) {
+      // Top level comment, notify pin author
       const authorAccount = await db.collection('accounts').findOne({ username: pin.reportedBy });
       if (!authorAccount || authorAccount.notifSettings?.replyReceived !== false) {
         await db.collection('notifications').insertOne({
           targetUser: pin.reportedBy,
           type: 'reply',
           isNew: true,
-          title: `@${author} replied to your report`,
+          title: `@${author} commented on your report`,
           subtitle: pin.title,
           detail: content,
           timeAgo: 'Just now',
@@ -834,6 +860,30 @@ app.post('/api/pins/:id/comments', async (req, res) => {
     }
 
     res.status(201).json({ ...newComment, id: result.insertedId.toString() });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Action on a comment (upvote, downvote, flag)
+app.post('/api/comments/:id/action', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { action } = req.body; // 'upvote', 'downvote', 'flag'
+    
+    let updateQuery = {};
+    if (action === 'upvote') updateQuery = { $inc: { upvotes: 1 } };
+    else if (action === 'downvote') updateQuery = { $inc: { downvotes: 1 } };
+    else if (action === 'flag') updateQuery = { $inc: { flags: 1 } };
+    else return res.status(400).json({ error: "Invalid action" });
+
+    const result = await db.collection('comments').findOneAndUpdate(
+      { _id: new ObjectId(id) },
+      updateQuery,
+      { returnDocument: 'after' }
+    );
+    if (!result) return res.status(404).json({ error: "Comment not found" });
+    res.json({ success: true, ...result });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

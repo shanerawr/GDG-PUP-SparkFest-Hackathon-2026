@@ -1,9 +1,88 @@
 import { useState, useEffect } from 'react';
-import { X, ThumbsUp, MessageCircle, Share2, CheckCircle, Clock, RefreshCw, MapPin } from 'lucide-react';
+import { X, ThumbsUp, ThumbsDown, Flag, MessageCircle, Share2, CheckCircle, Clock, RefreshCw, MapPin } from 'lucide-react';
 import { motion } from 'motion/react';
 import { LandscapeThumb } from './LandscapeThumb';
 import type { MapPin as MapPinType, Comment, UserProfile, ReportStatus } from '../types';
 import { HAZARD_COLORS } from '../types';
+
+// Helper to build comment tree
+function buildCommentTree(flatComments: Comment[]) {
+  const map = new Map<string, Comment & { children: any[] }>();
+  flatComments.forEach(c => map.set(c.id, { ...c, children: [] }));
+  
+  const roots: any[] = [];
+  flatComments.forEach(c => {
+    if (c.parentId && map.has(c.parentId)) {
+      map.get(c.parentId)!.children.push(map.get(c.id));
+    } else {
+      roots.push(map.get(c.id));
+    }
+  });
+  return roots;
+}
+
+function CommentNode({ comment, onReply, onAction }: { comment: any, onReply: (id: string, author: string) => void, onAction: (id: string, action: string) => void }) {
+  const isOfficial = comment.role && comment.role !== 'citizen';
+  return (
+    <div className="mt-3 first:mt-0">
+      <div
+        className={`flex items-start gap-2 rounded-2xl p-3 border ${
+          isOfficial
+            ? 'bg-blue-50/60 border-blue-100 shadow-sm shadow-blue-500/5'
+            : 'bg-gray-50 border-gray-100'
+        }`}
+      >
+        <div
+          className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-[11px] ${
+            isOfficial ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-700'
+          }`}
+        >
+          {comment.author.slice(0, 2).toUpperCase()}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <p className="text-[12px] font-bold text-gray-900">@{comment.author}</p>
+              {isOfficial && (
+                <span className="text-[8px] font-extrabold bg-blue-100 text-blue-700 border border-blue-200 rounded px-1.5 py-0.5 uppercase tracking-wider">
+                  {comment.governmentCategory || (comment.role === 'admin' ? 'Admin' : 'Responder')}
+                </span>
+              )}
+            </div>
+            <p className="text-[10px] text-gray-400">{comment.timeAgo}</p>
+          </div>
+          <p className="text-[13px] text-gray-700 leading-snug mt-1">{comment.content}</p>
+          
+          <div className="flex items-center gap-4 mt-2">
+            <button 
+              onClick={() => onReply(comment.id, comment.author)}
+              className="text-[11px] font-bold text-blue-600 hover:underline active:opacity-70 flex items-center gap-1"
+            >
+              <MessageCircle size={12} /> Reply
+            </button>
+            <button onClick={() => onAction(comment.id, 'upvote')} className="text-[11px] text-gray-500 hover:text-green-600 flex items-center gap-1">
+              <ThumbsUp size={12} /> {comment.upvotes || 0}
+            </button>
+            <button onClick={() => onAction(comment.id, 'downvote')} className="text-[11px] text-gray-500 hover:text-red-600 flex items-center gap-1">
+              <ThumbsDown size={12} /> {comment.downvotes || 0}
+            </button>
+            <button onClick={() => onAction(comment.id, 'flag')} className="text-[11px] text-gray-500 hover:text-orange-500 ml-auto flex items-center gap-1" title="Flag as inappropriate">
+              <Flag size={12} />
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      {comment.children && comment.children.length > 0 && (
+        <div className="ml-4 pl-2 border-l-2 border-gray-100 mt-2">
+          {comment.children.map((child: any) => (
+            <CommentNode key={child.id} comment={child} onReply={onReply} onAction={onAction} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface Props {
   pin: MapPinType;
@@ -25,6 +104,7 @@ export function ReportDetailPanel({ pin, onClose, currentUser, onCommentAdded, o
   const [upvotes, setUpvotes] = useState(pin.upvotes);
   const [comments, setComments] = useState<Comment[]>([]);
   const [replyText, setReplyText] = useState('');
+  const [replyingTo, setReplyingTo] = useState<{id: string, author: string} | null>(null);
   const [loadingComments, setLoadingComments] = useState(true);
   const [pinStatus, setPinStatus] = useState<ReportStatus>(pin.status);
 
@@ -70,6 +150,24 @@ export function ReportDetailPanel({ pin, onClose, currentUser, onCommentAdded, o
       });
   };
 
+  const handleCommentAction = (commentId: string, action: string) => {
+    // Optimistic UI update
+    setComments(prev => prev.map(c => {
+      if (c.id === commentId) {
+        if (action === 'upvote') return { ...c, upvotes: (c.upvotes || 0) + 1 };
+        if (action === 'downvote') return { ...c, downvotes: (c.downvotes || 0) + 1 };
+        if (action === 'flag') return { ...c, flags: (c.flags || 0) + 1 };
+      }
+      return c;
+    }));
+
+    fetch(`/api/comments/${commentId}/action`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action }),
+    }).catch(err => console.error(err));
+  };
+
   useEffect(() => {
     fetchComments();
   }, [pin.id]);
@@ -88,11 +186,13 @@ export function ReportDetailPanel({ pin, onClose, currentUser, onCommentAdded, o
         content: replyText,
         role: currentUser.role,
         governmentCategory: currentUser.governmentCategory,
+        parentId: replyingTo?.id
       }),
     })
       .then((res) => res.json())
       .then(() => {
         setReplyText('');
+        setReplyingTo(null);
         fetchComments();
         if (onCommentAdded) onCommentAdded();
 
@@ -225,62 +325,49 @@ export function ReportDetailPanel({ pin, onClose, currentUser, onCommentAdded, o
               <p className="text-[12.5px] text-gray-400 italic bg-gray-50 rounded-xl p-3">No replies yet. Be the first to reply!</p>
             ) : (
               <div className="space-y-3">
-                {comments.map((comment) => {
-                  const isOfficial = comment.role && comment.role !== 'citizen';
-                  return (
-                    <div
-                      key={comment.id}
-                      className={`flex items-start gap-2 rounded-2xl p-3 border ${
-                        isOfficial
-                          ? 'bg-blue-50/60 border-blue-100 shadow-sm shadow-blue-500/5'
-                          : 'bg-gray-50 border-gray-100'
-                      }`}
-                    >
-                      <div
-                        className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-[11px] ${
-                          isOfficial ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-700'
-                        }`}
-                      >
-                        {comment.author.slice(0, 2).toUpperCase()}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <p className="text-[12px] font-bold text-gray-900">@{comment.author}</p>
-                            {isOfficial && (
-                              <span className="text-[8px] font-extrabold bg-blue-100 text-blue-700 border border-blue-200 rounded px-1.5 py-0.5 uppercase tracking-wider">
-                                {comment.governmentCategory || (comment.role === 'admin' ? 'Admin' : 'Responder')}
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-[10px] text-gray-400">{comment.timeAgo}</p>
-                        </div>
-                        <p className="text-[13px] text-gray-700 leading-snug mt-1">{comment.content}</p>
-                      </div>
-                    </div>
-                  );
-                })}
+                {buildCommentTree(comments).map(c => (
+                  <CommentNode 
+                    key={c.id} 
+                    comment={c} 
+                    onReply={(id, author) => setReplyingTo({ id, author })}
+                    onAction={handleCommentAction}
+                  />
+                ))}
               </div>
             )}
 
             {/* Reply Input Form */}
             {currentUser && (
-              <form onSubmit={handleSendReply} className="flex gap-2 mt-4">
-                <input
-                  type="text"
-                  value={replyText}
-                  onChange={(e) => setReplyText(e.target.value)}
-                  placeholder="Type a reply or update..."
-                  className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-[12.5px] focus:outline-none focus:border-blue-500 focus:bg-white"
-                  required
-                />
-                <button
-                  type="submit"
-                  className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-4 text-[12px] font-bold active:scale-95 transition-transform"
-                >
-                  Send
-                </button>
-              </form>
+              <div className="mt-4 flex flex-col gap-2">
+                {replyingTo && (
+                  <div className="flex items-center justify-between bg-blue-50 text-blue-700 text-[11px] font-bold px-3 py-1.5 rounded-lg w-max">
+                    <span>Replying to @{replyingTo.author}</span>
+                    <button 
+                      type="button"
+                      onClick={() => setReplyingTo(null)}
+                      className="ml-2 hover:bg-blue-100 rounded-full p-0.5 transition-colors"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                )}
+                <form onSubmit={handleSendReply} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={replyText}
+                    onChange={(e) => setReplyText(e.target.value)}
+                    placeholder={replyingTo ? `Reply to ${replyingTo.author}...` : "Type a reply or update..."}
+                    className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-[12.5px] focus:outline-none focus:border-blue-500 focus:bg-white"
+                    required
+                  />
+                  <button
+                    type="submit"
+                    className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-4 text-[12px] font-bold active:scale-95 transition-transform"
+                  >
+                    Send
+                  </button>
+                </form>
+              </div>
             )}
           </div>
 
