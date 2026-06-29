@@ -1,23 +1,21 @@
-import { useState, useRef, useEffect } from 'react';
-import {
-  Droplets, TreePine, HardHat, Car, Zap, Flame, Mountain, AlertTriangle,
-  Locate, ChevronDown, Check,
-} from 'lucide-react';
+import { useState, useEffect, useRef, useCallback, Component } from 'react';
+import { setOptions, importLibrary } from '@googlemaps/js-api-loader';
+import { ChevronDown, Check, Locate, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { MapBackground } from './MapBackground';
-import { LandscapeThumb } from './LandscapeThumb';
 import type { MapPin, HazardLevel, HazardFilter } from '../types';
 import { HAZARD_COLORS } from '../types';
 
-const reportIcons: Record<string, React.ElementType> = {
-  flood: Droplets,
-  'fallen-tree': TreePine,
-  'road-work': HardHat,
-  'car-crash': Car,
-  'fallen-pole': Zap,
-  fire: Flame,
-  landslide: Mountain,
-  other: AlertTriangle,
+const GOOGLE_MAPS_API_KEY = "AIzaSyB2WFoRbVp3HPXHotn27e600KWnHJZZQ80";
+
+const reportSvgPaths: Record<string, string> = {
+  flood: 'M12 22a7 7 0 0 0 7-7c0-4.3-7-11-7-11S5 10.7 5 15a7 7 0 0 0 7 7z',
+  'fallen-tree': 'M17 22H7M12 22v-5M9 13l3-3 3 3M8 17l4-4 4 4',
+  'road-work': 'M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z',
+  'car-crash': 'M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-1.1 0-2 .9-2 2v7c0 .6.4 1 1 1h2M7 21a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM17 21a2 2 0 1 0 0-4 2 2 0 0 0 0 4z',
+  'fallen-pole': 'M13 2L3 14h9l-1 8 10-12h-9l1-8z',
+  fire: 'M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z',
+  landslide: 'M8 3v10M3 13h10M16 18l4-4 4 4M20 14v8',
+  other: 'M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01',
 };
 
 const FILTERS: { key: HazardFilter; label: string }[] = [
@@ -30,152 +28,28 @@ const FILTERS: { key: HazardFilter; label: string }[] = [
 
 interface Props {
   pins: MapPin[];
-  onAddReport?: () => void;
   onOpenDetail: (pin: MapPin) => void;
 }
 
-/* ── Single component: pin + tooltip as one unit ── */
-function PinWithTooltip({
-  pin,
-  mapWidth,
-  selected,
-  onClick,
-  onViewMore,
-}: {
-  pin: MapPin;
-  mapWidth: number;
-  selected: boolean;
-  onClick: () => void;
-  onViewMore: () => void;
-}) {
-  const { bg } = HAZARD_COLORS[pin.hazardLevel];
-  const Icon = reportIcons[pin.type] ?? AlertTriangle;
-
-  // Nudge tooltip left/right so it doesn't overflow the map edges.
-  // Tooltip is 230px wide, centered on the pin.
-  // pin.x is 0–100. Center pixel ≈ pin.x / 100 * mapWidth.
-  const centerPx = (pin.x / 100) * mapWidth;
-  const half = 115; // 230 / 2
-  let nudge = 0;
-  if (centerPx - half < 8) nudge = 8 - (centerPx - half);       // too close to left
-  if (centerPx + half > mapWidth - 8) nudge = (mapWidth - 8) - (centerPx + half);   // too close to right
-
-  return (
-    // Wrapper positioned so its BOTTOM EDGE sits at (pin.x%, pin.y%) on the map.
-    // The pin teardrop hangs down from here; the tooltip floats up from here.
-    <div
-      className="absolute"
-      style={{
-        left: `${pin.x}%`,
-        top: `${pin.y}%`,
-        transform: 'translate(-50%, -100%)',
-        width: 32,
-        height: 42,
-      }}
-    >
-      {/* ── Tooltip: bottom:100% guarantees it's above the pin wrapper ── */}
-      <AnimatePresence>
-        {selected && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.88, y: 8 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.88, y: 8 }}
-            transition={{ type: 'spring', damping: 22, stiffness: 400 }}
-            className="absolute z-20 pointer-events-auto"
-            style={{
-              bottom: '100%',       // top of pin wrapper = bottom of tooltip zone
-              marginBottom: 6,      // small gap between arrow tip and pin head
-              left: `calc(50% + ${nudge}px)`,
-              transform: 'translateX(-50%)',
-              width: 230,
-            }}
-          >
-            {/* Unified drop-shadow for card + arrow */}
-            <div style={{ filter: 'drop-shadow(0 4px 14px rgba(0,0,0,0.22))' }}>
-
-              {/* Card: thumbnail LEFT, text RIGHT */}
-              <div className="bg-white rounded-xl overflow-hidden flex" style={{ width: 230 }}>
-                <LandscapeThumb className="w-[72px] flex-shrink-0" />
-                <div className="flex-1 px-2.5 pt-2.5 pb-2 min-w-0 flex flex-col">
-                  <p
-                    className="text-[12px] font-extrabold text-gray-900 leading-snug mb-0.5"
-                    style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
-                  >
-                    {pin.title}
-                  </p>
-                  <p
-                    className="text-[11px] text-gray-500 mb-1"
-                    style={{ display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
-                  >
-                    {pin.description.slice(0, 45)}
-                  </p>
-                  <p className="text-[10px] text-gray-400">Reported by {pin.reportedBy}</p>
-                  <p className="text-[10px] text-gray-400 mb-1">{pin.timeAgo}</p>
-                  <div className="flex justify-end">
-                    <button
-                      onClick={e => { e.stopPropagation(); onViewMore(); }}
-                      className="text-[11px] font-bold"
-                      style={{ color: '#1d4ed8' }}
-                    >
-                      View more
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Downward arrow pointing at the pin */}
-              <div className="flex justify-center" style={{ marginTop: -1 }}>
-                <div style={{
-                  width: 0, height: 0,
-                  borderLeft: '10px solid transparent',
-                  borderRight: '10px solid transparent',
-                  borderTop: '12px solid white',
-                }} />
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ── Teardrop pin button ── */}
-      <button
-        onClick={onClick}
-        className="absolute inset-0 focus:outline-none active:scale-95 transition-transform"
-      >
-        <div className="relative w-full h-full">
-          {/* Shadow blob */}
-          <div
-            className="absolute bottom-0 left-1/2 rounded-full opacity-20"
-            style={{ width: 14, height: 5, transform: 'translateX(-50%)', background: '#000', filter: 'blur(2px)' }}
-          />
-          {/* Teardrop */}
-          <svg width="32" height="42" viewBox="0 0 32 42" fill="none">
-            <path
-              d="M16 2C9.373 2 4 7.373 4 14C4 23 16 40 16 40C16 40 28 23 28 14C28 7.373 22.627 2 16 2Z"
-              fill={bg} stroke="white" strokeWidth="2"
-            />
-            <circle cx="16" cy="14" r="7" fill="white" fillOpacity="0.25" />
-          </svg>
-          {/* Icon */}
-          <div className="absolute flex items-center justify-center" style={{ top: 6, left: 7, width: 18, height: 18 }}>
-            <Icon size={13} color="white" strokeWidth={2.5} />
-          </div>
-          {/* Thread count badge */}
-          {pin.threadCount > 1 && (
-            <div
-              className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-white text-[9px] font-bold flex items-center justify-center shadow"
-              style={{ color: bg, border: `2px solid ${bg}` }}
-            >
-              {pin.threadCount}
-            </div>
-          )}
+/* ── Error Boundary ── */
+interface EBState { error: Error | null }
+class MapErrorBoundary extends Component<{ children: React.ReactNode }, EBState> {
+  state: EBState = { error: null };
+  static getDerivedStateFromError(e: Error) { return { error: e }; }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ padding: 24, background: '#fef2f2', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: '#991b1b', marginBottom: 8 }}>Map Error</div>
+          <div style={{ fontSize: 12, color: '#b91c1c', maxWidth: 320 }}>{this.state.error.message}</div>
         </div>
-      </button>
-    </div>
-  );
+      );
+    }
+    return this.props.children;
+  }
 }
 
-/* ── Filter dropdown ── */
+/* ── Filter Dropdown ── */
 function FilterDropdown({ filter, onChange }: { filter: HazardFilter; onChange: (f: HazardFilter) => void }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -191,10 +65,10 @@ function FilterDropdown({ filter, onChange }: { filter: HazardFilter; onChange: 
   }, []);
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="relative text-gray-800">
       <button
         onClick={() => setOpen(v => !v)}
-        className="flex items-center gap-2 px-4 py-2 rounded-full text-[13px] font-semibold shadow-lg border"
+        className="flex items-center gap-2 px-4 py-2 rounded-full text-[13px] font-semibold shadow-lg border cursor-pointer"
         style={
           activeColor
             ? { background: activeColor.bg, borderColor: activeColor.bg, color: 'white' }
@@ -202,8 +76,7 @@ function FilterDropdown({ filter, onChange }: { filter: HazardFilter; onChange: 
         }
       >
         <span>Filter: {active.label}</span>
-        <ChevronDown
-          size={14} strokeWidth={2.5}
+        <ChevronDown size={14} strokeWidth={2.5}
           style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}
         />
       </button>
@@ -215,20 +88,17 @@ function FilterDropdown({ filter, onChange }: { filter: HazardFilter; onChange: 
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.97 }}
             transition={{ duration: 0.15 }}
-            className="absolute top-full mt-2 left-1/2 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-30"
+            className="absolute top-full mt-2 left-1/2 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-[1001]"
             style={{ transform: 'translateX(-50%)', minWidth: 200 }}
           >
             {FILTERS.map(f => {
               const color = f.key !== 'all' ? HAZARD_COLORS[f.key as HazardLevel] : null;
               const isActive = filter === f.key;
               return (
-                <button
-                  key={f.key}
-                  onClick={() => { onChange(f.key); setOpen(false); }}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-[13px] font-medium text-left hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0"
+                <button key={f.key} onClick={() => { onChange(f.key); setOpen(false); }}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-[13px] font-medium text-left hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0 cursor-pointer"
                 >
-                  <span className="w-3 h-3 rounded-full flex-shrink-0"
-                    style={{ background: color ? color.bg : '#9ca3af' }} />
+                  <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: color ? color.bg : '#9ca3af' }} />
                   <span className={isActive ? 'font-bold text-gray-900' : 'text-gray-700'}>{f.label}</span>
                   {isActive && <Check size={14} className="ml-auto text-gray-900" />}
                 </button>
@@ -241,69 +111,162 @@ function FilterDropdown({ filter, onChange }: { filter: HazardFilter; onChange: 
   );
 }
 
-/* ── MapView ── */
-export function MapView({ pins, onOpenDetail }: Props) {
+/* ── Inner map component (rendered inside error boundary) ── */
+function MapInner({ pins, onOpenDetail }: Props) {
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<google.maps.Map | null>(null);
+  const markersRef = useRef<google.maps.Marker[]>([]);
+  const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
   const [filter, setFilter] = useState<HazardFilter>('all');
-  const [selectedPinId, setSelectedPinId] = useState<string | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [mapWidth, setMapWidth] = useState(430);
+  const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
+  /* Load Google Maps once on mount */
   useEffect(() => {
-    if (!containerRef.current) return;
-    const observer = new ResizeObserver(entries => {
-      for (let entry of entries) {
-        setMapWidth(entry.contentRect.width || 430);
-      }
-    });
-    observer.observe(containerRef.current);
-    return () => observer.disconnect();
+    let cancelled = false;
+
+    setOptions({ apiKey: GOOGLE_MAPS_API_KEY, version: 'weekly' });
+
+    importLibrary('maps')
+      .then(() => {
+        if (cancelled || !mapRef.current) return;
+        const map = new google.maps.Map(mapRef.current, {
+          center: { lat: 14.5995, lng: 120.9842 },
+          zoom: 13,
+          disableDefaultUI: true,
+          gestureHandling: 'greedy',
+          clickableIcons: false,
+        });
+        mapInstanceRef.current = map;
+        infoWindowRef.current = new google.maps.InfoWindow({ maxWidth: 240 });
+        if (!cancelled) setLoaded(true);
+      })
+      .catch((e: Error) => {
+        if (!cancelled) setLoadError(e.message);
+      });
+
+    return () => { cancelled = true; };
   }, []);
 
-  const visible = filter === 'all' ? pins : pins.filter(p => p.hazardLevel === filter);
+  /* Locate handler */
+  const handleLocate = useCallback(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    navigator.geolocation?.getCurrentPosition(
+      pos => { map.panTo({ lat: pos.coords.latitude, lng: pos.coords.longitude }); map.setZoom(16); },
+      () => { map.panTo({ lat: 14.5995, lng: 120.9842 }); map.setZoom(13); }
+    );
+  }, []);
+
+  /* Place / refresh markers */
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    const iw = infoWindowRef.current;
+    if (!loaded || !map || !iw) return;
+
+    markersRef.current.forEach(m => m.setMap(null));
+    markersRef.current = [];
+
+    const visible = filter === 'all' ? pins : pins.filter(p => p.hazardLevel === filter);
+
+    visible.forEach(pin => {
+      const { bg } = HAZARD_COLORS[pin.hazardLevel];
+      const path = reportSvgPaths[pin.type] ?? reportSvgPaths['other'];
+
+      // Build SVG data-URL icon
+      const svgStr = [
+        `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="44" viewBox="0 0 32 44">`,
+        `<path d="M16 2C9.373 2 4 7.373 4 14C4 23 16 40 16 40C16 40 28 23 28 14C28 7.373 22.627 2 16 2Z"`,
+        ` fill="${bg}" stroke="white" stroke-width="2"/>`,
+        `<circle cx="16" cy="14" r="7" fill="white" fill-opacity="0.25"/>`,
+        `<svg x="10" y="8" width="12" height="12" viewBox="0 0 24 24" fill="none"`,
+        ` stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">`,
+        `<path d="${path}"/></svg>`,
+        `</svg>`,
+      ].join('');
+
+      const icon: google.maps.Icon = {
+        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svgStr),
+        scaledSize: new google.maps.Size(32, 44),
+        anchor: new google.maps.Point(16, 44),
+      };
+
+      const marker = new google.maps.Marker({ map, position: { lat: pin.lat, lng: pin.lng }, icon, title: pin.title });
+
+      marker.addListener('click', () => {
+        const div = document.createElement('div');
+        div.style.cssText = 'width:220px;display:flex;border-radius:10px;overflow:hidden;font-family:system-ui,sans-serif;';
+        div.innerHTML = `
+          <div style="width:56px;flex-shrink:0;background:${bg}22;display:flex;align-items:center;justify-content:center;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${bg}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="${path}"/></svg>
+          </div>
+          <div style="flex:1;padding:8px 10px;display:flex;flex-direction:column;gap:2px;">
+            <div style="font-size:12px;font-weight:800;color:#111;line-height:1.3;">${pin.title}</div>
+            <div style="font-size:10px;color:#6b7280;">${pin.description.slice(0, 50)}…</div>
+            <div style="font-size:10px;color:#9ca3af;">by ${pin.reportedBy} · ${pin.timeAgo}</div>
+            <button id="vm-${pin.id}" style="margin-top:4px;align-self:flex-end;font-size:11px;font-weight:700;color:#1d4ed8;border:none;background:none;cursor:pointer;padding:0;">View more →</button>
+          </div>`;
+
+        iw.setContent(div);
+        iw.open(map, marker);
+
+        setTimeout(() => {
+          document.getElementById(`vm-${pin.id}`)?.addEventListener('click', () => {
+            iw.close();
+            onOpenDetail(pin);
+          });
+        }, 100);
+      });
+
+      markersRef.current.push(marker);
+    });
+
+    return () => {
+      markersRef.current.forEach(m => m.setMap(null));
+      markersRef.current = [];
+    };
+  }, [loaded, pins, filter, onOpenDetail]);
+
+  if (loadError) {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center bg-gray-50 p-6 text-center">
+        <AlertTriangle className="text-yellow-500 mb-3" size={32} />
+        <p className="font-bold text-sm text-gray-900 mb-1">Google Maps failed to load</p>
+        <p className="text-xs text-gray-500 max-w-xs">{loadError}</p>
+      </div>
+    );
+  }
 
   return (
-    <div ref={containerRef} className="relative w-full h-full bg-[#f0ebe0]">
-      {/* Map */}
-      <div className="absolute inset-0 overflow-hidden">
-        <MapBackground />
-      </div>
+    <div className="relative w-full h-full z-0">
+      <div ref={mapRef} className="w-full h-full" />
 
-      {/* Backdrop — dismiss on map tap, sits below pins */}
-      {selectedPinId && (
-        <div
-          className="absolute inset-0 z-10"
-          onClick={() => setSelectedPinId(null)}
-        />
+      {!loaded && (
+        <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
+          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        </div>
       )}
 
-      {/* Pins (each manages its own tooltip as a child) */}
-      {visible.map(pin => (
-        <PinWithTooltip
-          key={pin.id}
-          pin={pin}
-          mapWidth={mapWidth}
-          selected={selectedPinId === pin.id}
-          onClick={() => setSelectedPinId(id => id === pin.id ? null : pin.id)}
-          onViewMore={() => { onOpenDetail(pin); setSelectedPinId(null); }}
-        />
-      ))}
-
-      {/* Filter dropdown — centred at top */}
-      <div className="absolute top-3 left-0 right-0 z-20 flex justify-center pointer-events-none">
+      <div className="absolute top-3 left-0 right-0 z-[1000] flex justify-center pointer-events-none">
         <div className="pointer-events-auto">
-          <FilterDropdown
-            filter={filter}
-            onChange={f => { setFilter(f); setSelectedPinId(null); }}
-          />
+          <FilterDropdown filter={filter} onChange={setFilter} />
         </div>
       </div>
 
-      {/* Locate button */}
-      <button
-        className="absolute right-3 bottom-3 z-20 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center text-gray-600"
+      <button onClick={handleLocate}
+        className="absolute right-3 bottom-3 z-[1000] w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center text-gray-600 hover:bg-gray-50 active:scale-95 transition-transform cursor-pointer"
       >
         <Locate size={18} />
       </button>
     </div>
+  );
+}
+
+/* ── Public export wrapped in error boundary ── */
+export function MapView(props: Props) {
+  return (
+    <MapErrorBoundary>
+      <MapInner {...props} />
+    </MapErrorBoundary>
   );
 }

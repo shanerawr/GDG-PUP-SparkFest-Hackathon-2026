@@ -7,8 +7,8 @@ export interface MapPin {
   id: string;
   type: ReportType;
   hazardLevel: HazardLevel;
-  x: number;
-  y: number;
+  lat: number;
+  lng: number;
   title: string;
   address: string;
   reportedBy: string;

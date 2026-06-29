@@ -3,7 +3,7 @@ import type { MapPin, SavedRoute, AppNotification, UserReport } from './types';
 export const mockPins: MapPin[] = [
   {
     id: '1', type: 'flood', hazardLevel: 'life-threatening',
-    x: 20, y: 35,
+    lat: 14.6299, lng: 120.9719,
     title: 'Baha sa Tondo Market',
     address: 'Tondo, Manila',
     reportedBy: 'user123', timeAgo: '5 mins ago',
@@ -13,7 +13,7 @@ export const mockPins: MapPin[] = [
   },
   {
     id: '2', type: 'road-work', hazardLevel: 'needs-attention',
-    x: 54, y: 62,
+    lat: 14.5794, lng: 120.9961,
     title: 'Road construction at Quirino Ave',
     address: 'Paco, Manila',
     reportedBy: 'maryreyes', timeAgo: '23 mins ago',
@@ -23,7 +23,7 @@ export const mockPins: MapPin[] = [
   },
   {
     id: '3', type: 'fallen-pole', hazardLevel: 'urgent',
-    x: 37, y: 54,
+    lat: 14.5786, lng: 120.9822,
     title: 'Natumbang Poste, Ermita',
     address: 'Ermita, Manila',
     reportedBy: 'juandelacruz', timeAgo: '41 mins ago',
@@ -33,7 +33,7 @@ export const mockPins: MapPin[] = [
   },
   {
     id: '4', type: 'car-crash', hazardLevel: 'urgent',
-    x: 70, y: 42,
+    lat: 14.6009, lng: 120.9752,
     title: 'Aksidente sa Rizal Avenue',
     address: 'Binondo, Manila',
     reportedBy: 'pedrobenedicto', timeAgo: '1 hr ago',
@@ -43,7 +43,7 @@ export const mockPins: MapPin[] = [
   },
   {
     id: '5', type: 'flood', hazardLevel: 'minor',
-    x: 58, y: 77,
+    lat: 14.5684, lng: 120.9902,
     title: 'Minor flooding near market',
     address: 'Malate, Manila',
     reportedBy: 'lorenaguzman', timeAgo: '2 hrs ago',
@@ -53,7 +53,7 @@ export const mockPins: MapPin[] = [
   },
   {
     id: '6', type: 'fire', hazardLevel: 'life-threatening',
-    x: 78, y: 28,
+    lat: 14.6128, lng: 120.9942,
     title: 'Sunog sa Sampaloc',
     address: 'Sampaloc, Manila',
     reportedBy: 'andreamendoza', timeAgo: '18 mins ago',
@@ -63,7 +63,7 @@ export const mockPins: MapPin[] = [
   },
   {
     id: '7', type: 'fallen-tree', hazardLevel: 'needs-attention',
-    x: 42, y: 72,
+    lat: 14.5778, lng: 120.9840,
     title: 'Fallen tree blocking Padre Faura',
     address: 'Ermita, Manila',
     reportedBy: 'rogeliotan', timeAgo: '3 hrs ago',
