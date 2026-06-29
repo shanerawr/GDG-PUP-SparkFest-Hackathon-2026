@@ -1,13 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, ThumbsUp, MessageCircle, Share2, CheckCircle, Clock, RefreshCw, MapPin } from 'lucide-react';
 import { motion } from 'motion/react';
 import { LandscapeThumb } from './LandscapeThumb';
-import type { MapPin as MapPinType } from '../types';
+import type { MapPin as MapPinType, Comment, UserProfile } from '../types';
 import { HAZARD_COLORS } from '../types';
 
 interface Props {
   pin: MapPinType;
   onClose: () => void;
+  currentUser: UserProfile | null;
+  onCommentAdded?: () => void;
 }
 
 const statusConfig = {
@@ -17,11 +19,74 @@ const statusConfig = {
   resolved: { label: 'Resolved', Icon: CheckCircle, color: '#16a34a' },
 };
 
-export function ReportDetailPanel({ pin, onClose }: Props) {
+export function ReportDetailPanel({ pin, onClose, currentUser, onCommentAdded }: Props) {
   const [upvoted, setUpvoted] = useState(false);
   const [upvotes, setUpvotes] = useState(pin.upvotes);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [replyText, setReplyText] = useState('');
+  const [loadingComments, setLoadingComments] = useState(true);
+
   const { bg, label: hazardLabel } = HAZARD_COLORS[pin.hazardLevel];
   const { label: statusLabel, Icon: StatusIcon, color: statusColor } = statusConfig[pin.status];
+
+  const fetchComments = () => {
+    fetch(`/api/pins/${pin.id}/comments`)
+      .then((res) => res.json())
+      .then((data) => {
+        setComments(data);
+        setLoadingComments(false);
+      })
+      .catch((err) => {
+        console.error(err);
+        setLoadingComments(false);
+      });
+  };
+
+  useEffect(() => {
+    fetchComments();
+  }, [pin.id]);
+
+  const handleSendReply = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!replyText.trim() || !currentUser) return;
+
+    fetch(`/api/pins/${pin.id}/comments`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        author: currentUser.username,
+        content: replyText,
+      }),
+    })
+      .then((res) => res.json())
+      .then(() => {
+        setReplyText('');
+        fetchComments();
+        if (onCommentAdded) onCommentAdded();
+
+        // Simulate a response from "bayan_patrol" dispatch after 3 seconds
+        setTimeout(() => {
+          fetch(`/api/pins/${pin.id}/comments`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              author: 'bayan_patrol',
+              content: `Salamat @${currentUser.username}! We have noted this update and alerted the response unit.`,
+            }),
+          })
+            .then(() => {
+              fetchComments();
+              if (onCommentAdded) onCommentAdded();
+            })
+            .catch((err) => console.error(err));
+        }, 3000);
+      })
+      .catch((err) => console.error(err));
+  };
 
   return (
     <motion.div
@@ -99,22 +164,56 @@ export function ReportDetailPanel({ pin, onClose }: Props) {
             </div>
           )}
 
-          {/* Second user entry */}
-          <div className="flex items-start gap-2 mb-4 bg-gray-50 rounded-2xl p-3">
-            <div className="w-7 h-7 rounded-full bg-gray-300 flex items-center justify-center flex-shrink-0">
-              <span className="text-[10px] font-bold text-gray-600">U2</span>
-            </div>
-            <div className="flex-1">
-              <p className="text-[12px] font-semibold text-gray-800">user234</p>
-              <p className="text-[11px] text-gray-400 mb-1">8 mins ago</p>
-              <p className="text-[13px] text-gray-700 leading-snug">
-                Confirming — the area is still flooded. Stay away from Tondo Market entrance.
-              </p>
-            </div>
+          {/* Dynamic Replies/Updates Feed */}
+          <div className="mt-4 mb-4 pt-3 border-t border-gray-100">
+            <p className="text-[12px] font-bold text-gray-400 uppercase tracking-wider mb-2">Replies & Updates</p>
+
+            {loadingComments ? (
+              <p className="text-[12.5px] text-gray-400">Loading replies...</p>
+            ) : comments.length === 0 ? (
+              <p className="text-[12.5px] text-gray-400 italic bg-gray-50 rounded-xl p-3">No replies yet. Be the first to reply!</p>
+            ) : (
+              <div className="space-y-3">
+                {comments.map((comment) => (
+                  <div key={comment.id} className="flex items-start gap-2 bg-gray-50 rounded-2xl p-3 border border-gray-100">
+                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 font-bold text-[11px] text-blue-700">
+                      {comment.author.slice(0, 2).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <p className="text-[12px] font-bold text-gray-900">@{comment.author}</p>
+                        <p className="text-[10px] text-gray-400">{comment.timeAgo}</p>
+                      </div>
+                      <p className="text-[13px] text-gray-700 leading-snug mt-0.5">{comment.content}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Reply Input Form */}
+            {currentUser && (
+              <form onSubmit={handleSendReply} className="flex gap-2 mt-4">
+                <input
+                  type="text"
+                  value={replyText}
+                  onChange={(e) => setReplyText(e.target.value)}
+                  placeholder="Type a reply or update..."
+                  className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-[12.5px] focus:outline-none focus:border-blue-500 focus:bg-white"
+                  required
+                />
+                <button
+                  type="submit"
+                  className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-4 text-[12px] font-bold active:scale-95 transition-transform"
+                >
+                  Send
+                </button>
+              </form>
+            )}
           </div>
 
           {/* Photo thumbnails */}
-          <p className="text-[12px] font-bold text-gray-400 uppercase tracking-wider mb-2">Photos ({pin.threadCount + 1})</p>
+          <p className="text-[12px] font-bold text-gray-400 uppercase tracking-wider mb-2 mt-4">Photos</p>
           <div className="flex gap-2 mb-5">
             <LandscapeThumb className="flex-1 rounded-xl" style={{ height: 80 } as React.CSSProperties} />
             <LandscapeThumb className="flex-1 rounded-xl" style={{ height: 80 } as React.CSSProperties} />
@@ -129,8 +228,8 @@ export function ReportDetailPanel({ pin, onClose }: Props) {
               onClick={() => {
                 if (!upvoted) {
                   setUpvoted(true);
-                  setUpvotes(v => v + 1);
-                  fetch(`/api/pins/${pin.id}/upvote`, { method: 'POST' }).catch(err => console.error(err));
+                  setUpvotes((v) => v + 1);
+                  fetch(`/api/pins/${pin.id}/upvote`, { method: 'POST' }).catch((err) => console.error(err));
                 }
               }}
               className="flex items-center gap-2 text-[14px] font-semibold"

@@ -32,6 +32,31 @@ export interface SavedRoute {
   routePath: { lat: number; lng: number }[];
 }
 
+export interface UserProfile {
+  id: string;
+  username: string;
+  displayName: string;
+  avatarUrl?: string;
+  isVerified: boolean;
+  verificationStatus: 'unverified' | 'pending' | 'verified';
+  reportsCount: number;
+  upvotesCount: number;
+  joinedDate: string;
+  notifSettings: {
+    pushEnabled: boolean;
+    newPinNearby: boolean;
+    replyReceived: boolean;
+    upvotesOnPost: boolean;
+  };
+}
+
+export interface Comment {
+  id: string;
+  author: string;
+  content: string;
+  timeAgo: string;
+}
+
 export interface AppNotification {
   id: string;
   type: 'new-report' | 'reply' | 'upvote' | 'route-alert';
@@ -41,6 +66,7 @@ export interface AppNotification {
   detail: string;
   timeAgo: string;
 }
+
 
 export interface UserReport {
   id: string;

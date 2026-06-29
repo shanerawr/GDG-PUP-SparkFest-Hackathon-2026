@@ -10,7 +10,7 @@ dns.setServers(['8.8.8.8', '1.1.1.1']);
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 const MONGODB_URI = process.env.MONGODB_URI;
 
 if (!MONGODB_URI) {
@@ -20,6 +20,12 @@ if (!MONGODB_URI) {
 
 app.use(cors());
 app.use(express.json());
+
+// Request logger for debugging
+app.use((req, res, next) => {
+  console.log(`[HTTP] ${req.method} ${req.url}`, req.body);
+  next();
+});
 
 let db;
 const client = new MongoClient(MONGODB_URI);
@@ -114,6 +120,44 @@ async function seedDatabase() {
     await db.collection('reports').insertMany(initialReports);
     console.log("Seeded initial reports data");
   }
+
+  const notificationsCount = await db.collection('notifications').countDocuments();
+  if (notificationsCount === 0) {
+    const initialNotifications = [
+      {
+        targetUser: 'juandelacruz',
+        type: 'new-report',
+        isNew: true,
+        title: 'Flood reported at Tondo Market',
+        subtitle: 'Tondo, Manila',
+        detail: 'Knee-deep floodwater near the public market entrance. Passable with care.',
+        timeAgo: '7 mins ago',
+        createdAt: new Date(Date.now() - 7 * 60 * 1000)
+      },
+      {
+        targetUser: 'juandelacruz',
+        type: 'reply',
+        isNew: true,
+        title: 'maryreyes replied to your comment',
+        subtitle: 'Natumbang Poste, Ermita',
+        detail: 'BFP is already on the way to clear the wires.',
+        timeAgo: '15 mins ago',
+        createdAt: new Date(Date.now() - 15 * 60 * 1000)
+      },
+      {
+        targetUser: 'juandelacruz',
+        type: 'upvote',
+        isNew: false,
+        title: '24 upvotes on your report',
+        subtitle: 'Natumbang Poste, Ermita',
+        detail: 'Your report has received 24 upvotes from the community.',
+        timeAgo: '1 hr ago',
+        createdAt: new Date(Date.now() - 60 * 60 * 1000)
+      }
+    ];
+    await db.collection('notifications').insertMany(initialNotifications);
+    console.log("Seeded initial notifications data");
+  }
 }
 
 // Middleware to ensure database connection in serverless environment
@@ -172,6 +216,23 @@ app.post('/api/pins', async (req, res) => {
     };
     await db.collection('reports').insertOne(userReport);
 
+    // Trigger "New Hazard Nearby" notification for all other users
+    const otherAccounts = await db.collection('accounts').find({ username: { $ne: req.body.reportedBy } }).toArray();
+    for (const acc of otherAccounts) {
+      if (acc.notifSettings?.newPinNearby !== false) {
+        await db.collection('notifications').insertOne({
+          targetUser: acc.username,
+          type: 'new-report',
+          isNew: true,
+          title: `New ${req.body.title || 'hazard'} reported nearby`,
+          subtitle: req.body.address || 'Nearby location',
+          detail: req.body.description || 'Be careful while traveling through this area.',
+          timeAgo: 'Just now',
+          createdAt: new Date()
+        });
+      }
+    }
+
     res.status(201).json({ ...newPin, id: result.insertedId.toString() });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -190,6 +251,28 @@ app.post('/api/pins/:id/upvote', async (req, res) => {
     if (!result) {
       return res.status(404).json({ error: "Pin not found" });
     }
+
+    // Trigger "Upvote Received" notification for the author
+    if (result.reportedBy) {
+      const authorAccount = await db.collection('accounts').findOne({ username: result.reportedBy });
+      if (!authorAccount || authorAccount.notifSettings?.upvotesOnPost !== false) {
+        const notifTitle = `${result.upvotes} upvotes on your report`;
+        await db.collection('notifications').updateOne(
+          { targetUser: result.reportedBy, type: 'upvote', subtitle: result.title },
+          {
+            $set: {
+              isNew: true,
+              title: notifTitle,
+              detail: `Your report "${result.title}" has received ${result.upvotes} upvotes.`,
+              timeAgo: 'Just now',
+              createdAt: new Date()
+            }
+          },
+          { upsert: true }
+        );
+      }
+    }
+
     res.json({ id: result._id.toString(), upvotes: result.upvotes });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -294,21 +377,244 @@ app.get('/api/reports', async (req, res) => {
 // Get or create account profile (Mock/Simple Account system)
 app.post('/api/accounts/profile', async (req, res) => {
   try {
-    const { username, language } = req.body;
-    let account = await db.collection('accounts').findOne({ username });
-    if (!account) {
+    const { username, language, password, action } = req.body;
+    const cleanUsername = username.toLowerCase().replace(/\s+/g, '').trim();
+    let account = await db.collection('accounts').findOne({ username: cleanUsername });
+
+    if (action === 'signup') {
+      if (account) {
+        return res.status(200).json({ error: "Username already taken." });
+      }
       account = {
-        username,
-        displayName: username.charAt(0).toUpperCase() + username.slice(1),
+        username: cleanUsername,
+        displayName: cleanUsername.charAt(0).toUpperCase() + cleanUsername.slice(1),
+        password: password || '',
         language: language || 'en',
-        createdAt: new Date()
+        createdAt: new Date(),
+        isVerified: false,
+        verificationStatus: 'unverified',
+        reportsCount: 0,
+        upvotesCount: 0,
+        joinedDate: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+        notifSettings: {
+          pushEnabled: true,
+          newPinNearby: true,
+          replyReceived: true,
+          upvotesOnPost: true
+        }
       };
       const result = await db.collection('accounts').insertOne(account);
       account.id = result.insertedId.toString();
+      return res.status(201).json(account);
     } else {
+      // Login mode
+      if (!account) {
+        return res.status(200).json({ error: "User not found. Please Sign Up first." });
+      }
+      if (password) {
+        if (account.password && account.password !== password) {
+          return res.status(200).json({ error: "Incorrect password." });
+        } else if (!account.password) {
+          // Backward compatibility: set password on first login
+          await db.collection('accounts').updateOne(
+            { _id: account._id },
+            { $set: { password: password } }
+          );
+          account.password = password;
+        }
+      }
+      
+      // Ensure defaults exist for existing accounts
       account.id = account._id.toString();
+      account.displayName = account.displayName || account.username;
+      account.isVerified = account.isVerified !== undefined ? account.isVerified : false;
+      account.verificationStatus = account.verificationStatus || 'unverified';
+      account.reportsCount = account.reportsCount !== undefined ? account.reportsCount : 0;
+      account.upvotesCount = account.upvotesCount !== undefined ? account.upvotesCount : 0;
+      account.joinedDate = account.joinedDate || 'Member since June 2026';
+      account.notifSettings = account.notifSettings || {
+        pushEnabled: true,
+        newPinNearby: true,
+        replyReceived: true,
+        upvotesOnPost: true
+      };
+      return res.json(account);
     }
-    res.json(account);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Update profile details
+app.put('/api/accounts/profile', async (req, res) => {
+  try {
+    const { id, displayName, avatarUrl, notifSettings, verificationStatus, isVerified, password } = req.body;
+    if (!id) {
+      return res.status(400).json({ error: "Missing account ID" });
+    }
+    const updateData = {};
+    if (displayName !== undefined) updateData.displayName = displayName;
+    if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl;
+    if (notifSettings !== undefined) updateData.notifSettings = notifSettings;
+    if (verificationStatus !== undefined) updateData.verificationStatus = verificationStatus;
+    if (isVerified !== undefined) updateData.isVerified = isVerified;
+    if (password !== undefined) updateData.password = password;
+
+    const result = await db.collection('accounts').findOneAndUpdate(
+      { _id: new ObjectId(id) },
+      { $set: updateData },
+      { returnDocument: 'after' }
+    );
+    if (!result) return res.status(404).json({ error: "Account not found" });
+    const formatted = { ...result, id: result._id.toString() };
+    res.json(formatted);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* ==========================================================================
+   NOTIFICATIONS ENDPOINTS (/api/notifications)
+   ========================================================================== */
+
+// Get notifications for a user
+app.get('/api/notifications', async (req, res) => {
+  try {
+    const { username } = req.query;
+    const query = username ? { targetUser: username } : {};
+    const notifications = await db.collection('notifications')
+      .find(query)
+      .sort({ createdAt: -1 })
+      .toArray();
+    const formatted = notifications.map(n => ({ ...n, id: n._id.toString() }));
+    res.json(formatted);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Mark single notification as read
+app.put('/api/notifications/:id/read', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await db.collection('notifications').findOneAndUpdate(
+      { _id: new ObjectId(id) },
+      { $set: { isNew: false } },
+      { returnDocument: 'after' }
+    );
+    if (!result) return res.status(404).json({ error: "Notification not found" });
+    res.json({ ...result, id: result._id.toString() });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Mark all notifications as read
+app.put('/api/notifications/mark-read', async (req, res) => {
+  try {
+    const { username } = req.body;
+    const query = username ? { targetUser: username } : {};
+    await db.collection('notifications').updateMany(
+      query,
+      { $set: { isNew: false } }
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Delete a notification
+app.delete('/api/notifications/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await db.collection('notifications').deleteOne({ _id: new ObjectId(id) });
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ error: "Notification not found" });
+    }
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* ==========================================================================
+   COMMENTS/REPLIES ENDPOINTS (/api/pins/:id/comments)
+   ========================================================================== */
+
+// Get comments for a pin
+app.get('/api/pins/:id/comments', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const comments = await db.collection('comments')
+      .find({ pinId: id })
+      .sort({ createdAt: 1 })
+      .toArray();
+    const formatted = comments.map(c => ({ ...c, id: c._id.toString() }));
+    res.json(formatted);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Post a comment/reply
+app.post('/api/pins/:id/comments', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { author, content } = req.body;
+    const newComment = {
+      pinId: id,
+      author: author || 'anonymous',
+      content,
+      createdAt: new Date(),
+      timeAgo: 'Just now'
+    };
+    const result = await db.collection('comments').insertOne(newComment);
+    
+    // Increment threadCount on pin
+    await db.collection('pins').updateOne(
+      { _id: new ObjectId(id) },
+      { $inc: { threadCount: 1 } }
+    );
+
+    // Get the pin author to notify them
+    const pin = await db.collection('pins').findOne({ _id: new ObjectId(id) });
+    if (pin && pin.reportedBy && pin.reportedBy !== author) {
+      const authorAccount = await db.collection('accounts').findOne({ username: pin.reportedBy });
+      if (!authorAccount || authorAccount.notifSettings?.replyReceived !== false) {
+        await db.collection('notifications').insertOne({
+          targetUser: pin.reportedBy,
+          type: 'reply',
+          isNew: true,
+          title: `@${author} replied to your report`,
+          subtitle: pin.title,
+          detail: content,
+          timeAgo: 'Just now',
+          createdAt: new Date()
+        });
+      }
+    }
+
+    // Notify other commenters in the thread
+    const previousComments = await db.collection('comments').find({ pinId: id }).toArray();
+    const uniqueCommenters = [...new Set(previousComments.map(c => c.author))].filter(u => u !== author && u !== (pin ? pin.reportedBy : ''));
+    for (const commenter of uniqueCommenters) {
+      const commenterAccount = await db.collection('accounts').findOne({ username: commenter });
+      if (!commenterAccount || commenterAccount.notifSettings?.replyReceived !== false) {
+        await db.collection('notifications').insertOne({
+          targetUser: commenter,
+          type: 'reply',
+          isNew: true,
+          title: `@${author} replied to a thread you commented on`,
+          subtitle: pin ? pin.title : 'Report Details',
+          detail: content,
+          timeAgo: 'Just now',
+          createdAt: new Date()
+        });
+      }
+    }
+
+    res.status(201).json({ ...newComment, id: result.insertedId.toString() });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
