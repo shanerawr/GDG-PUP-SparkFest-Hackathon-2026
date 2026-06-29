@@ -4,8 +4,10 @@ import dotenv from 'dotenv';
 import { MongoClient, ObjectId } from 'mongodb';
 import dns from 'dns';
 
-// Force Node.js to use Google and Cloudflare DNS to bypass local router DNS resolution bugs for mongodb+srv
-dns.setServers(['8.8.8.8', '1.1.1.1']);
+// Only force DNS in local development, not in Vercel's serverless environment
+if (!process.env.VERCEL) {
+  dns.setServers(['8.8.8.8', '1.1.1.1']);
+}
 
 dotenv.config();
 
@@ -13,7 +15,8 @@ const app = express();
 const PORT = process.env.PORT || 5001;
 const MONGODB_URI = process.env.MONGODB_URI;
 
-if (!MONGODB_URI) {
+// Don't exit on Vercel, otherwise it returns HTML 500 pages instead of JSON
+if (!MONGODB_URI && !process.env.VERCEL) {
   console.error("Error: MONGODB_URI is not defined in the environment variables.");
   process.exit(1);
 }
@@ -31,8 +34,13 @@ let db;
 const client = new MongoClient(MONGODB_URI);
 
 async function connectDB() {
+  if (db) return db; // reuse connection if already connected
+  
+  if (!MONGODB_URI) {
+    throw new Error("MONGODB_URI is not configured in Vercel Environment Variables");
+  }
+
   try {
-    if (db) return db; // reuse connection if already connected
     await client.connect();
     db = client.db('bantaybayan');
     console.log("Successfully connected to MongoDB");
@@ -42,7 +50,10 @@ async function connectDB() {
     return db;
   } catch (err) {
     console.error("Failed to connect to MongoDB", err);
-    process.exit(1);
+    if (!process.env.VERCEL) {
+      process.exit(1);
+    }
+    throw err;
   }
 }
 
@@ -186,8 +197,12 @@ async function seedDatabase() {
 
 // Middleware to ensure database connection in serverless environment
 app.use(async (req, res, next) => {
-  await connectDB();
-  next();
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    res.status(500).json({ error: "Database Connection Error: " + err.message });
+  }
 });
 
 /* ==========================================================================
