@@ -192,7 +192,8 @@ function MapInner({ pins, activeRoute, onOpenDetail, onClearActiveRoute }: Props
 
     visible.forEach(pin => {
       const hazardLvl = pin.hazardLevel || 'needs-attention';
-      const { bg } = HAZARD_COLORS[hazardLvl];
+      const hazardColor = HAZARD_COLORS[hazardLvl as HazardLevel] || HAZARD_COLORS['needs-attention'];
+      const { bg } = hazardColor;
       const path = reportSvgPaths[pin.type] ?? reportSvgPaths['other'];
       
       // Determine if pin is near the active route path
