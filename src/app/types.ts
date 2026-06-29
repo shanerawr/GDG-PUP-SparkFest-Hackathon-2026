@@ -42,6 +42,8 @@ export interface UserProfile {
   reportsCount: number;
   upvotesCount: number;
   joinedDate: string;
+  role?: 'citizen' | 'authority' | 'lgu' | 'admin';
+  governmentCategory?: string;
   notifSettings: {
     pushEnabled: boolean;
     newPinNearby: boolean;
@@ -55,6 +57,8 @@ export interface Comment {
   author: string;
   content: string;
   timeAgo: string;
+  role?: 'citizen' | 'authority' | 'lgu' | 'admin';
+  governmentCategory?: string;
 }
 
 export interface AppNotification {
