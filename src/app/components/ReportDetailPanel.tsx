@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { X, ThumbsUp, MessageCircle, Share2, CheckCircle, Clock, RefreshCw, MapPin } from 'lucide-react';
 import { motion } from 'motion/react';
 import { LandscapeThumb } from './LandscapeThumb';
-import type { MapPin as MapPinType, Comment, UserProfile } from '../types';
+import type { MapPin as MapPinType, Comment, UserProfile, ReportStatus } from '../types';
 import { HAZARD_COLORS } from '../types';
 
 interface Props {
@@ -10,6 +10,7 @@ interface Props {
   onClose: () => void;
   currentUser: UserProfile | null;
   onCommentAdded?: () => void;
+  onStatusUpdated?: () => void;
 }
 
 const statusConfig = {
@@ -19,15 +20,38 @@ const statusConfig = {
   resolved: { label: 'Resolved', Icon: CheckCircle, color: '#16a34a' },
 };
 
-export function ReportDetailPanel({ pin, onClose, currentUser, onCommentAdded }: Props) {
+export function ReportDetailPanel({ pin, onClose, currentUser, onCommentAdded, onStatusUpdated }: Props) {
   const [upvoted, setUpvoted] = useState(false);
   const [upvotes, setUpvotes] = useState(pin.upvotes);
   const [comments, setComments] = useState<Comment[]>([]);
   const [replyText, setReplyText] = useState('');
   const [loadingComments, setLoadingComments] = useState(true);
+  const [pinStatus, setPinStatus] = useState<ReportStatus>(pin.status);
 
   const { bg, label: hazardLabel } = HAZARD_COLORS[pin.hazardLevel];
-  const { label: statusLabel, Icon: StatusIcon, color: statusColor } = statusConfig[pin.status];
+  const { label: statusLabel, Icon: StatusIcon, color: statusColor } = statusConfig[pinStatus];
+
+  const handleStatusChange = (newStatus: ReportStatus) => {
+    if (!currentUser) return;
+    setPinStatus(newStatus);
+    fetch(`/api/pins/${pin.id}/status`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        status: newStatus,
+        username: currentUser.username,
+      }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.error) {
+          alert(data.error);
+        } else {
+          if (onStatusUpdated) onStatusUpdated();
+        }
+      })
+      .catch((err) => console.error(err));
+  };
 
   const fetchComments = () => {
     fetch(`/api/pins/${pin.id}/comments`)
@@ -58,6 +82,8 @@ export function ReportDetailPanel({ pin, onClose, currentUser, onCommentAdded }:
       body: JSON.stringify({
         author: currentUser.username,
         content: replyText,
+        role: currentUser.role,
+        governmentCategory: currentUser.governmentCategory,
       }),
     })
       .then((res) => res.json())
@@ -136,13 +162,30 @@ export function ReportDetailPanel({ pin, onClose, currentUser, onCommentAdded }:
               <p className="text-[11px] text-gray-400">{pin.timeAgo}</p>
             </div>
             {/* Status */}
-            <span
-              className="flex items-center gap-1 text-[11px] font-semibold"
-              style={{ color: statusColor }}
-            >
-              <StatusIcon size={11} />
-              {statusLabel}
-            </span>
+            {currentUser && ['admin', 'authority', 'lgu'].includes(currentUser.role || '') ? (
+              <div className="flex items-center gap-1 bg-gray-50 border border-gray-200 rounded-xl px-2 py-1">
+                <StatusIcon size={11} style={{ color: statusColor }} />
+                <select
+                  value={pinStatus}
+                  onChange={(e) => handleStatusChange(e.target.value as ReportStatus)}
+                  className="text-[11.5px] font-bold bg-transparent border-0 outline-none p-0 cursor-pointer focus:ring-0"
+                  style={{ color: statusColor }}
+                >
+                  <option value="pending" className="text-gray-700 font-medium">Pending</option>
+                  <option value="acknowledged" className="text-blue-600 font-medium">Acknowledged</option>
+                  <option value="in-progress" className="text-amber-600 font-medium">In Progress</option>
+                  <option value="resolved" className="text-green-600 font-medium">Resolved</option>
+                </select>
+              </div>
+            ) : (
+              <span
+                className="flex items-center gap-1 text-[11px] font-semibold"
+                style={{ color: statusColor }}
+              >
+                <StatusIcon size={11} />
+                {statusLabel}
+              </span>
+            )}
           </div>
 
           {/* Location row */}
@@ -174,20 +217,41 @@ export function ReportDetailPanel({ pin, onClose, currentUser, onCommentAdded }:
               <p className="text-[12.5px] text-gray-400 italic bg-gray-50 rounded-xl p-3">No replies yet. Be the first to reply!</p>
             ) : (
               <div className="space-y-3">
-                {comments.map((comment) => (
-                  <div key={comment.id} className="flex items-start gap-2 bg-gray-50 rounded-2xl p-3 border border-gray-100">
-                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 font-bold text-[11px] text-blue-700">
-                      {comment.author.slice(0, 2).toUpperCase()}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <p className="text-[12px] font-bold text-gray-900">@{comment.author}</p>
-                        <p className="text-[10px] text-gray-400">{comment.timeAgo}</p>
+                {comments.map((comment) => {
+                  const isOfficial = comment.role && comment.role !== 'citizen';
+                  return (
+                    <div
+                      key={comment.id}
+                      className={`flex items-start gap-2 rounded-2xl p-3 border ${
+                        isOfficial
+                          ? 'bg-blue-50/60 border-blue-100 shadow-sm shadow-blue-500/5'
+                          : 'bg-gray-50 border-gray-100'
+                      }`}
+                    >
+                      <div
+                        className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-[11px] ${
+                          isOfficial ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-700'
+                        }`}
+                      >
+                        {comment.author.slice(0, 2).toUpperCase()}
                       </div>
-                      <p className="text-[13px] text-gray-700 leading-snug mt-0.5">{comment.content}</p>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <p className="text-[12px] font-bold text-gray-900">@{comment.author}</p>
+                            {isOfficial && (
+                              <span className="text-[8px] font-extrabold bg-blue-100 text-blue-700 border border-blue-200 rounded px-1.5 py-0.5 uppercase tracking-wider">
+                                {comment.governmentCategory || (comment.role === 'admin' ? 'Admin' : 'Responder')}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[10px] text-gray-400">{comment.timeAgo}</p>
+                        </div>
+                        <p className="text-[13px] text-gray-700 leading-snug mt-1">{comment.content}</p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
 
