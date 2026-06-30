@@ -4,8 +4,10 @@ import dotenv from 'dotenv';
 import { MongoClient, ObjectId } from 'mongodb';
 import dns from 'dns';
 
-// Force Node.js to use Google and Cloudflare DNS to bypass local router DNS resolution bugs for mongodb+srv
-dns.setServers(['8.8.8.8', '1.1.1.1']);
+// Only force DNS in local development, not in Vercel's serverless environment
+if (!process.env.VERCEL) {
+  dns.setServers(['8.8.8.8', '1.1.1.1']);
+}
 
 dotenv.config();
 
@@ -13,13 +15,15 @@ const app = express();
 const PORT = process.env.PORT || 5001;
 const MONGODB_URI = process.env.MONGODB_URI;
 
-if (!MONGODB_URI) {
+// Don't exit on Vercel, otherwise it returns HTML 500 pages instead of JSON
+if (!MONGODB_URI && !process.env.VERCEL) {
   console.error("Error: MONGODB_URI is not defined in the environment variables.");
   process.exit(1);
 }
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Request logger for debugging
 app.use((req, res, next) => {
@@ -28,11 +32,20 @@ app.use((req, res, next) => {
 });
 
 let db;
-const client = new MongoClient(MONGODB_URI);
+let client;
 
 async function connectDB() {
+  if (db) return db; // reuse connection if already connected
+  
+  if (!MONGODB_URI) {
+    throw new Error("MONGODB_URI is not configured in Vercel Environment Variables");
+  }
+
+  if (!client) {
+    client = new MongoClient(MONGODB_URI);
+  }
+
   try {
-    if (db) return db; // reuse connection if already connected
     await client.connect();
     db = client.db('bantaybayan');
     console.log("Successfully connected to MongoDB");
@@ -42,122 +55,15 @@ async function connectDB() {
     return db;
   } catch (err) {
     console.error("Failed to connect to MongoDB", err);
-    process.exit(1);
+    if (!process.env.VERCEL) {
+      process.exit(1);
+    }
+    throw err;
   }
 }
 
 // Seed helper function
 async function seedDatabase() {
-  const pinsCount = await db.collection('pins').countDocuments();
-  if (pinsCount === 0) {
-    const initialPins = [
-      {
-        type: 'flood', hazardLevel: 'life-threatening',
-        lat: 14.6299, lng: 120.9719,
-        title: 'Baha sa Tondo Market',
-        address: 'Tondo, Manila',
-        reportedBy: 'user123', timeAgo: '5 mins ago',
-        upvotes: 24,
-        description: 'Knee-deep floodwater near the public market. Road is completely impassable. Avoid this area.',
-        status: 'acknowledged', threadCount: 7
-      },
-      {
-        type: 'road-work', hazardLevel: 'needs-attention',
-        lat: 14.5794, lng: 120.9961,
-        title: 'Road construction at Quirino Ave',
-        address: 'Paco, Manila',
-        reportedBy: 'maryreyes', timeAgo: '23 mins ago',
-        upvotes: 12,
-        description: 'Ongoing road works causing single-lane traffic. Expect 20–30 minute delays.',
-        status: 'in-progress', threadCount: 3
-      },
-      {
-        type: 'fallen-pole', hazardLevel: 'urgent',
-        lat: 14.5786, lng: 120.9822,
-        title: 'Natumbang Poste, Ermita',
-        address: 'Ermita, Manila',
-        reportedBy: 'juandelacruz', timeAgo: '41 mins ago',
-        upvotes: 35,
-        description: "Electric pole down after last night's storm. Live wires on road. DANGER! Keep away.",
-        status: 'acknowledged', threadCount: 12
-      }
-    ];
-    await db.collection('pins').insertMany(initialPins);
-    console.log("Seeded initial pins data");
-  }
-
-  const routesCount = await db.collection('routes').countDocuments();
-  if (routesCount === 0) {
-    const initialRoutes = [
-      {
-        name: 'Home → Work',
-        from: 'Tondo, Manila',
-        to: 'Makati CBD',
-        distance: '17.6 km', duration: '45 min',
-        lastEdited: 'June 7, 2026',
-        nearbyReports: 3,
-        routePath: [
-          { lat: 14.6299, lng: 120.9719 },
-          { lat: 14.5794, lng: 120.9961 }
-        ]
-      }
-    ];
-    await db.collection('routes').insertMany(initialRoutes);
-    console.log("Seeded initial routes data");
-  }
-
-  const reportsCount = await db.collection('reports').countDocuments();
-  if (reportsCount === 0) {
-    const initialReports = [
-      {
-        typeName: 'Flood', typeKey: 'flood',
-        moreDetails: 'Knee-deep near Tondo Market',
-        date: 'June 19, 2026', time: '10:29 AM',
-        location: 'Tondo, Manila',
-        status: 'confirmed'
-      }
-    ];
-    await db.collection('reports').insertMany(initialReports);
-    console.log("Seeded initial reports data");
-  }
-
-  const notificationsCount = await db.collection('notifications').countDocuments();
-  if (notificationsCount === 0) {
-    const initialNotifications = [
-      {
-        targetUser: 'juandelacruz',
-        type: 'new-report',
-        isNew: true,
-        title: 'Flood reported at Tondo Market',
-        subtitle: 'Tondo, Manila',
-        detail: 'Knee-deep floodwater near the public market entrance. Passable with care.',
-        timeAgo: '7 mins ago',
-        createdAt: new Date(Date.now() - 7 * 60 * 1000)
-      },
-      {
-        targetUser: 'juandelacruz',
-        type: 'reply',
-        isNew: true,
-        title: 'maryreyes replied to your comment',
-        subtitle: 'Natumbang Poste, Ermita',
-        detail: 'BFP is already on the way to clear the wires.',
-        timeAgo: '15 mins ago',
-        createdAt: new Date(Date.now() - 15 * 60 * 1000)
-      },
-      {
-        targetUser: 'juandelacruz',
-        type: 'upvote',
-        isNew: false,
-        title: '24 upvotes on your report',
-        subtitle: 'Natumbang Poste, Ermita',
-        detail: 'Your report has received 24 upvotes from the community.',
-        timeAgo: '1 hr ago',
-        createdAt: new Date(Date.now() - 60 * 60 * 1000)
-      }
-    ];
-    await db.collection('notifications').insertMany(initialNotifications);
-    console.log("Seeded initial notifications data");
-  }
 
   // Seed default admin account
   const adminExists = await db.collection('accounts').findOne({ username: 'admin' });
@@ -186,8 +92,12 @@ async function seedDatabase() {
 
 // Middleware to ensure database connection in serverless environment
 app.use(async (req, res, next) => {
-  await connectDB();
-  next();
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    res.status(500).json({ error: "Database Connection Error: " + err.message });
+  }
 });
 
 /* ==========================================================================
@@ -211,7 +121,7 @@ app.post('/api/pins', async (req, res) => {
   try {
     const newPin = {
       type: req.body.type,
-      hazardLevel: req.body.hazardLevel,
+      hazardLevel: req.body.hazardLevel || 'needs-attention',
       lat: Number(req.body.lat),
       lng: Number(req.body.lng),
       title: req.body.title || 'Reported Hazard',
@@ -222,6 +132,9 @@ app.post('/api/pins', async (req, res) => {
       description: req.body.description || '',
       status: 'pending',
       threadCount: 0,
+      photo: req.body.photo || null,
+      photos: req.body.photos || (req.body.photo ? [req.body.photo] : []),
+      radius: req.body.radius ? Number(req.body.radius) : undefined,
       createdAt: new Date()
     };
 
@@ -236,6 +149,9 @@ app.post('/api/pins', async (req, res) => {
       time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
       location: req.body.address || 'Unknown Location',
       status: 'pending',
+      photo: req.body.photo || null,
+      photos: req.body.photos || (req.body.photo ? [req.body.photo] : []),
+      radius: req.body.radius ? Number(req.body.radius) : undefined,
       pinId: result.insertedId
     };
     await db.collection('reports').insertOne(userReport);
@@ -258,6 +174,74 @@ app.post('/api/pins', async (req, res) => {
     }
 
     res.status(201).json({ ...newPin, id: result.insertedId.toString() });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Edit a pin
+app.put('/api/pins/:id/edit', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const pinUpdate = {
+      type: req.body.type,
+      title: req.body.title || 'Reported Hazard',
+      address: req.body.address || 'Unknown Location',
+      description: req.body.description || '',
+      photo: req.body.photo || null,
+      photos: req.body.photos || (req.body.photo ? [req.body.photo] : [])
+    };
+    if (req.body.lat !== undefined) pinUpdate.lat = Number(req.body.lat);
+    if (req.body.lng !== undefined) pinUpdate.lng = Number(req.body.lng);
+
+    const pinResult = await db.collection('pins').updateOne(
+      { _id: new ObjectId(id) },
+      { $set: pinUpdate }
+    );
+
+    if (pinResult.matchedCount === 0) {
+      return res.status(404).json({ error: "Pin not found" });
+    }
+
+    // Also update the associated report
+    await db.collection('reports').updateOne(
+      { pinId: new ObjectId(id) },
+      { 
+        $set: {
+          typeKey: req.body.type,
+          typeName: req.body.title || 'Reported Hazard',
+          location: req.body.address || 'Unknown Location',
+          moreDetails: req.body.description || '',
+          photo: req.body.photo || null,
+          photos: req.body.photos || (req.body.photo ? [req.body.photo] : [])
+        }
+      }
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Delete a pin
+app.delete('/api/pins/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const pinResult = await db.collection('pins').deleteOne({ _id: new ObjectId(id) });
+    if (pinResult.deletedCount === 0) {
+      return res.status(404).json({ error: "Pin not found" });
+    }
+
+    // Also delete the associated report
+    await db.collection('reports').deleteOne({ pinId: new ObjectId(id) });
+    
+    // Also delete associated comments
+    await db.collection('comments').deleteMany({ pinId: id });
+    
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -686,7 +670,7 @@ app.get('/api/pins/:id/comments', async (req, res) => {
 app.post('/api/pins/:id/comments', async (req, res) => {
   try {
     const { id } = req.params;
-    const { author, content, role, governmentCategory } = req.body;
+    const { author, content, role, governmentCategory, parentId } = req.body;
     const newComment = {
       pinId: id,
       author: author || 'anonymous',
@@ -694,8 +678,14 @@ app.post('/api/pins/:id/comments', async (req, res) => {
       role: author === 'bayan_patrol' ? 'authority' : (role || 'citizen'),
       governmentCategory: author === 'bayan_patrol' ? 'DRRMO' : (governmentCategory || ''),
       createdAt: new Date(),
-      timeAgo: 'Just now'
+      timeAgo: 'Just now',
+      upvotes: 0,
+      downvotes: 0,
+      flags: 0
     };
+    if (parentId) {
+      newComment.parentId = parentId;
+    }
     const result = await db.collection('comments').insertOne(newComment);
     
     // Increment threadCount on pin
@@ -706,14 +696,34 @@ app.post('/api/pins/:id/comments', async (req, res) => {
 
     // Get the pin author to notify them
     const pin = await db.collection('pins').findOne({ _id: new ObjectId(id) });
-    if (pin && pin.reportedBy && pin.reportedBy !== author) {
+    
+    // If it's a nested reply, notify the parent comment's author
+    if (parentId) {
+      const parentComment = await db.collection('comments').findOne({ _id: new ObjectId(parentId) });
+      if (parentComment && parentComment.author !== author) {
+        const parentAuthorAccount = await db.collection('accounts').findOne({ username: parentComment.author });
+        if (!parentAuthorAccount || parentAuthorAccount.notifSettings?.replyReceived !== false) {
+          await db.collection('notifications').insertOne({
+            targetUser: parentComment.author,
+            type: 'reply',
+            isNew: true,
+            title: `@${author} replied to your comment`,
+            subtitle: pin ? pin.title : 'Report Details',
+            detail: content,
+            timeAgo: 'Just now',
+            createdAt: new Date()
+          });
+        }
+      }
+    } else if (pin && pin.reportedBy && pin.reportedBy !== author) {
+      // Top level comment, notify pin author
       const authorAccount = await db.collection('accounts').findOne({ username: pin.reportedBy });
       if (!authorAccount || authorAccount.notifSettings?.replyReceived !== false) {
         await db.collection('notifications').insertOne({
           targetUser: pin.reportedBy,
           type: 'reply',
           isNew: true,
-          title: `@${author} replied to your report`,
+          title: `@${author} commented on your report`,
           subtitle: pin.title,
           detail: content,
           timeAgo: 'Just now',
@@ -742,6 +752,71 @@ app.post('/api/pins/:id/comments', async (req, res) => {
     }
 
     res.status(201).json({ ...newComment, id: result.insertedId.toString() });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Action on a comment (upvote, downvote, flag)
+app.post('/api/comments/:id/action', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { action, username, reason, details } = req.body; // 'upvote', 'downvote', 'flag'
+    
+    if (!username) return res.status(400).json({ error: "Username required" });
+
+    const comment = await db.collection('comments').findOne({ _id: new ObjectId(id) });
+    if (!comment) return res.status(404).json({ error: "Comment not found" });
+
+    let { upvotedBy = [], downvotedBy = [], flaggedBy = [], flagReports = [], upvotes = 0, downvotes = 0, flags = 0 } = comment;
+
+    if (action === 'upvote') {
+      if (upvotedBy.includes(username)) {
+        upvotedBy = upvotedBy.filter(u => u !== username);
+        upvotes--;
+      } else {
+        upvotedBy.push(username);
+        upvotes++;
+        if (downvotedBy.includes(username)) {
+          downvotedBy = downvotedBy.filter(u => u !== username);
+          downvotes--;
+        }
+      }
+    } else if (action === 'downvote') {
+      if (downvotedBy.includes(username)) {
+        downvotedBy = downvotedBy.filter(u => u !== username);
+        downvotes--;
+      } else {
+        downvotedBy.push(username);
+        downvotes++;
+        if (upvotedBy.includes(username)) {
+          upvotedBy = upvotedBy.filter(u => u !== username);
+          upvotes--;
+        }
+      }
+    } else if (action === 'flag') {
+      if (flaggedBy.includes(username)) {
+        // Unflag
+        flaggedBy = flaggedBy.filter(u => u !== username);
+        flagReports = flagReports.filter(r => r.username !== username);
+        flags--;
+      } else {
+        // Flag with details
+        flaggedBy.push(username);
+        flagReports.push({ username, reason: reason || 'Other', details: details || '', createdAt: new Date() });
+        flags++;
+      }
+    } else {
+      return res.status(400).json({ error: "Invalid action" });
+    }
+
+    const result = await db.collection('comments').findOneAndUpdate(
+      { _id: new ObjectId(id) },
+      { $set: { upvotedBy, downvotedBy, flaggedBy, flagReports, upvotes, downvotes, flags } },
+      { returnDocument: 'after' }
+    );
+    
+    res.json({ success: true, ...result });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

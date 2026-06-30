@@ -14,12 +14,20 @@ import { VerificationModal } from './components/VerificationModal';
 import { useRoutes } from './hooks/useRoutes';
 import type { AppPanel, MapPin, UserReport, SavedRoute, UserProfile } from './types';
 
+const CATEGORIES = [
+  { key: 'hazard', label: 'Road Hazard' },
+  { key: 'flood', label: 'Flood' },
+  { key: 'accident', label: 'Accident' },
+  { key: 'traffic', label: 'Traffic' }
+];
+
 export default function App() {
   const [activePanel, setActivePanel] = useState<AppPanel>(null);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [showVerification, setShowVerification] = useState(false);
   const [showAddReport, setShowAddReport] = useState(false);
   const [showAddRoute, setShowAddRoute] = useState(false);
+  const [editingReport, setEditingReport] = useState<UserReport | null>(null);
   const [editingRoute, setEditingRoute] = useState<SavedRoute | null>(null);
   const [detailPin, setDetailPin] = useState<MapPin | null>(null);
   const [activeRoute, setActiveRoute] = useState<SavedRoute | null>(null);
@@ -84,8 +92,9 @@ export default function App() {
       .catch(err => console.error('Error fetching pins:', err));
   };
 
-  const fetchReports = () => {
-    fetch('/api/reports')
+  const fetchReports = (username?: string) => {
+    const url = username ? `/api/reports?username=${username}` : '/api/reports';
+    fetch(url)
       .then(res => res.json())
       .then(data => setUserReports(data))
       .catch(err => console.error('Error fetching reports:', err));
@@ -131,43 +140,44 @@ export default function App() {
     }
   };
 
-  const handleAddReportSubmit = (reportData: { type: string; address: string; description: string; lat: number; lng: number }) => {
-    fetch('/api/pins', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        ...reportData,
-        reportedBy: currentUser?.username || 'anonymous',
-      }),
-    })
-      .then(res => {
-        if (!res.ok) throw new Error('Failed to create report');
-        return res.json();
-      })
-      .then(() => {
+  const handleAddReportSubmit = (reportData: { type: string; address: string; description: string; lat: number; lng: number; photo?: string; photos?: string[] }) => {
+    if (!currentUser) return;
+    
+    if (editingReport) {
+      // Edit existing report
+      fetch(`/api/pins/${editingReport.pinId}/edit`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...reportData,
+          title: CATEGORIES.find(c => c.key === reportData.type)?.label || 'Reported Hazard',
+        }),
+      }).then(() => {
+        fetchReports(currentUser.username);
         fetchPins();
-        fetchReports();
-        fetchNotifications();
-        setShowAddReport(false);
-        
-        // Also update local reports count
-        if (currentUser) {
-          const updated = {
-            ...currentUser,
-            reportsCount: (currentUser.reportsCount || 0) + 1
-          };
-          setCurrentUser(updated);
-          localStorage.setItem('bb_user', JSON.stringify(updated));
-          fetch('/api/accounts/profile', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(updated),
-          }).catch(err => console.error(err));
-        }
-      })
-      .catch(err => console.error(err));
+      }).catch(console.error);
+    } else {
+      // Create new report
+      fetch('/api/pins', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...reportData,
+          title: CATEGORIES.find(c => c.key === reportData.type)?.label || 'Reported Hazard',
+          reportedBy: currentUser.username,
+        }),
+      }).then(res => res.json())
+        .then(() => {
+          fetchReports(currentUser.username);
+          fetchPins(); // Refresh pins on map
+        })
+        .catch(console.error);
+    }
+    
+    setShowAddReport(false);
+    setEditingReport(null);
   };
 
   const handleMarkAllRead = () => {
@@ -310,6 +320,7 @@ export default function App() {
           {(showAddRoute || editingRoute) && (
             <AddRouteModal
               key="add-route"
+              pins={pins}
               editRoute={editingRoute ?? undefined}
               onClose={() => { setShowAddRoute(false); setEditingRoute(null); }}
               onSave={route => {
@@ -328,7 +339,8 @@ export default function App() {
           {showAddReport && (
             <AddReportModal
               key="add-report"
-              onClose={() => setShowAddReport(false)}
+              initialData={editingReport ?? undefined}
+              onClose={() => { setShowAddReport(false); setEditingReport(null); }}
               onSubmit={handleAddReportSubmit}
             />
           )}

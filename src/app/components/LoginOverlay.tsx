@@ -168,7 +168,7 @@ export function LoginOverlay({ onLoginSuccess }: Props) {
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
                   placeholder="Juan dela Cruz"
-                  className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-10 pr-4 py-3 text-[14px] font-medium text-gray-900 focus:outline-none focus:border-blue-500 focus:bg-white transition-colors"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-10 pr-4 py-3 text-[14px] font-medium text-black focus:outline-none focus:border-blue-500 focus:bg-white transition-colors"
                   required
                 />
               </div>
@@ -188,7 +188,7 @@ export function LoginOverlay({ onLoginSuccess }: Props) {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="juandelacruz"
-                className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-9 pr-4 py-3 text-[14px] font-medium text-gray-900 focus:outline-none focus:border-blue-500 focus:bg-white transition-colors"
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-9 pr-4 py-3 text-[14px] font-medium text-black focus:outline-none focus:border-blue-500 focus:bg-white transition-colors"
                 required
               />
             </div>
@@ -207,7 +207,7 @@ export function LoginOverlay({ onLoginSuccess }: Props) {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-10 pr-10 py-3 text-[14px] font-medium text-gray-900 focus:outline-none focus:border-blue-500 focus:bg-white transition-colors"
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-10 pr-10 py-3 text-[14px] font-medium text-black focus:outline-none focus:border-blue-500 focus:bg-white transition-colors"
                 required
               />
               <button

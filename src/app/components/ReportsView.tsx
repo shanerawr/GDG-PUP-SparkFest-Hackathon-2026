@@ -1,4 +1,4 @@
-import { Plus, MoreHorizontal } from 'lucide-react';
+import { Plus, Pencil, Trash2, FileText, MapPin } from 'lucide-react';
 import { LandscapeThumb } from './LandscapeThumb';
 import { PanelHeader } from './PanelHeader';
 import type { UserReport } from '../types';

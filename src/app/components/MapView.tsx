@@ -3,7 +3,7 @@ import { setOptions, importLibrary } from '@googlemaps/js-api-loader';
 import { ChevronDown, Check, Locate, AlertTriangle, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { MapPin, HazardLevel, HazardFilter, SavedRoute } from '../types';
-import { HAZARD_COLORS } from '../types';
+import { HAZARD_COLORS, reportSvgPaths } from '../types';
 
 const GOOGLE_MAPS_API_KEY = "AIzaSyB2WFoRbVp3HPXHotn27e600KWnHJZZQ80";
 
@@ -128,7 +128,9 @@ function MapInner({ pins, activeRoute, onOpenDetail, onClearActiveRoute }: Props
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.Marker[]>([]);
+  const circlesRef = useRef<google.maps.Circle[]>([]);
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
+  const activePinIdRef = useRef<string | null>(null);
   const routePolylineRef = useRef<google.maps.Polyline | null>(null);
   const [filter, setFilter] = useState<HazardFilter>('all');
   const [loaded, setLoaded] = useState(false);
@@ -150,8 +152,14 @@ function MapInner({ pins, activeRoute, onOpenDetail, onClearActiveRoute }: Props
           gestureHandling: 'greedy',
           clickableIcons: false,
         });
+        
+        map.addListener('click', () => {
+          if (infoWindowRef.current) infoWindowRef.current.close();
+          activePinIdRef.current = null;
+        });
+
         mapInstanceRef.current = map;
-        infoWindowRef.current = new google.maps.InfoWindow({ maxWidth: 240 });
+        infoWindowRef.current = new google.maps.InfoWindow({ maxWidth: 240, headerDisabled: true });
         if (!cancelled) setLoaded(true);
       })
       .catch((e: Error) => {
@@ -178,7 +186,9 @@ function MapInner({ pins, activeRoute, onOpenDetail, onClearActiveRoute }: Props
     if (!loaded || !map || !iw) return;
 
     markersRef.current.forEach(m => m.setMap(null));
+    circlesRef.current.forEach(c => c.setMap(null));
     markersRef.current = [];
+    circlesRef.current = [];
 
     const visible = filter === 'all' ? pins : pins.filter(p => p.hazardLevel === filter);
 
@@ -226,6 +236,33 @@ function MapInner({ pins, activeRoute, onOpenDetail, onClearActiveRoute }: Props
         zIndex: near ? 1000 : 100
       });
 
+      if (pin.radius) {
+        const circle = new google.maps.Circle({
+          map,
+          center: { lat: pin.lat, lng: pin.lng },
+          radius: pin.radius,
+          fillColor: bg,
+          fillOpacity: 0.15,
+          strokeColor: bg,
+          strokeOpacity: 0.4,
+          strokeWeight: 2,
+          clickable: false,
+          zIndex: 50
+        });
+        circlesRef.current.push(circle);
+      }
+
+      const CATEGORIES: Record<string, string> = {
+        'flood': 'Flood',
+        'traffic': 'Traffic',
+        'fallen-pole': 'Fallen Pole',
+        'car-crash': 'Car Crash',
+        'road-work': 'Road Work',
+        'fire': 'Fire',
+        'hazard': 'Road Hazard',
+        'other': 'Other'
+      };
+      
       marker.addListener('click', () => {
         // Mini landscape SVG for the thumbnail inside the popup
         const thumbSvg = [
@@ -283,7 +320,9 @@ function MapInner({ pins, activeRoute, onOpenDetail, onClearActiveRoute }: Props
 
     return () => {
       markersRef.current.forEach(m => m.setMap(null));
+      circlesRef.current.forEach(c => c.setMap(null));
       markersRef.current = [];
+      circlesRef.current = [];
     };
   }, [loaded, pins, filter, onOpenDetail, activeRoute]);
 

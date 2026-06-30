@@ -2,13 +2,15 @@ import { useState, useEffect, useRef } from 'react';
 import { X, CheckCircle, Loader2, Navigation, MapPin as MapPinIcon, Map } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { setOptions, importLibrary } from '@googlemaps/js-api-loader';
-import type { SavedRoute } from '../types';
+import type { SavedRoute, MapPin, HazardLevel } from '../types';
+import { HAZARD_COLORS, reportSvgPaths } from '../types';
 
-const GOOGLE_MAPS_API_KEY = 'AIzaSyB2WFoRbVp3HPXHotn27e600KWnHJZZQ80';
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyB2WFoRbVp3HPXHotn27e600KWnHJZZQ80';
 
 interface Props {
   onClose: () => void;
   onSave: (route: SavedRoute) => void;
+  pins: MapPin[];
   editRoute?: SavedRoute;
 }
 
@@ -43,6 +45,7 @@ function PlacesInput({
   onPlaceSelected,
   disabled,
   placesReady,
+  className,
 }: {
   placeholder: string;
   value: string;
@@ -50,6 +53,7 @@ function PlacesInput({
   onPlaceSelected: (place: google.maps.places.PlaceResult) => void;
   disabled?: boolean;
   placesReady: boolean;
+  className?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
@@ -79,7 +83,7 @@ function PlacesInput({
       onChange={e => onChange(e.target.value)}
       placeholder={placeholder}
       disabled={disabled}
-      className="w-full border border-gray-200 rounded-xl px-3.5 py-3 text-[13px] bg-gray-50 placeholder-gray-400 focus:outline-none focus:border-blue-400 focus:bg-white transition-colors disabled:opacity-50"
+      className={className || "w-full border border-gray-200 rounded-xl px-3.5 py-3 text-[13px] text-black bg-gray-50 placeholder-gray-400 focus:outline-none focus:border-blue-400 focus:bg-white transition-colors disabled:opacity-50"}
     />
   );
 }
@@ -224,34 +228,241 @@ function MapPicker({
    Route options config
 ───────────────────────────────────────────────────────────── */
 const TRAVEL_MODES = [
-  { key: 'DRIVING',   label: '🚗 Car',       mode: 'DRIVING'   },
-  { key: 'MOTOR',     label: '🛵 Motor',     mode: 'DRIVING'   }, // motorcycles use the same road network
-  { key: 'TRANSIT',   label: '🚌 Transit',   mode: 'TRANSIT'   },
-  { key: 'WALKING',   label: '🚶 Walk',      mode: 'WALKING'   },
+  { key: 'DRIVING', label: '🚗 Car', mode: 'DRIVING' },
+  { key: 'MOTOR', label: '🛵 Motor', mode: 'DRIVING' },
+  { key: 'TRANSIT', label: '🚌 Transit', mode: 'TRANSIT' },
+  { key: 'WALKING', label: '🚶 Walk', mode: 'WALKING' },
+  { key: 'BICYCLING', label: '🚲 Cycle', mode: 'BICYCLING' },
 ];
 
-const AVOID_OPTIONS = [
-  { key: 'avoid-tolls',    label: '🚫 Avoid Tolls' },
-  { key: 'avoid-highways', label: '🛤 Avoid Highways' },
-  { key: 'avoid-ferries',  label: '⛴ Avoid Ferries' },
-  { key: 'avoid-indoor',   label: '🏢 Avoid Indoor' },
-];
+function getDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371e3; // Earth radius in meters
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+
+
+function RoutePreviewMap({
+  startAddress,
+  destAddress,
+  startPlace,
+  destPlace,
+  startLatLng,
+  destLatLng,
+  useCurrentLocation,
+  currentLatLng,
+  travelMode,
+  placesReady,
+  pins,
+}: {
+  startAddress: string;
+  destAddress: string;
+  startPlace: google.maps.places.PlaceResult | null;
+  destPlace: google.maps.places.PlaceResult | null;
+  startLatLng: { lat: number; lng: number } | null;
+  destLatLng: { lat: number; lng: number } | null;
+  useCurrentLocation: boolean;
+  currentLatLng: { lat: number; lng: number } | null;
+  travelMode: string;
+  placesReady: boolean;
+  pins: MapPin[];
+}) {
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<google.maps.Map | null>(null);
+  const directionsRendererRef = useRef<google.maps.DirectionsRenderer | null>(null);
+  const directionsServiceRef = useRef<google.maps.DirectionsService | null>(null);
+  const markersRef = useRef<google.maps.Marker[]>([]);
+  const [mapsLoaded, setMapsLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!placesReady || !mapRef.current) return;
+
+    Promise.all([
+      importLibrary('maps'),
+      importLibrary('routes'),
+      importLibrary('marker')
+    ]).then(() => {
+      if (!mapRef.current) return;
+
+      const map = new google.maps.Map(mapRef.current, {
+        center: { lat: 14.5995, lng: 120.9842 },
+        zoom: 11,
+        disableDefaultUI: true,
+        zoomControl: true,
+      });
+      mapInstanceRef.current = map;
+
+      const directionsService = new google.maps.DirectionsService();
+      directionsServiceRef.current = directionsService;
+
+      const directionsRenderer = new google.maps.DirectionsRenderer({
+        map,
+        suppressMarkers: false,
+      });
+      directionsRendererRef.current = directionsRenderer;
+      
+      setMapsLoaded(true);
+    });
+
+    return () => {
+      directionsRendererRef.current?.setMap(null);
+      markersRef.current.forEach(m => m.setMap(null));
+      mapInstanceRef.current = null;
+    };
+  }, [placesReady]);
+
+  useEffect(() => {
+    if (!mapsLoaded || !mapInstanceRef.current || !placesReady) return;
+    
+    // Clear old markers
+    markersRef.current.forEach(m => m.setMap(null));
+    markersRef.current = [];
+
+    // Add new markers
+    pins.forEach(pin => {
+      try {
+        const hazardLvl = pin.hazardLevel || 'needs-attention';
+        const hazardColor = HAZARD_COLORS[hazardLvl as HazardLevel] || HAZARD_COLORS['needs-attention'];
+        const { bg } = hazardColor;
+        const path = reportSvgPaths[pin.type] ?? reportSvgPaths['other'];
+        
+        // Build SVG data-URL icon
+        const svgStr = [
+          `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="44" viewBox="0 0 32 44">`,
+          `<path d="M16 2C9.373 2 4 7.373 4 14C4 23 16 40 16 40C16 40 28 23 28 14C28 7.373 22.627 2 16 2Z"`,
+          ` fill="${bg}" stroke="white" stroke-width="2"/>`,
+          `<circle cx="16" cy="14" r="7" fill="white" fill-opacity="0.25"/>`,
+          `<svg x="10" y="8" width="12" height="12" viewBox="0 0 24 24" fill="none"`,
+          ` stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">`,
+          `<path d="${path}"/></svg>`,
+          `</svg>`,
+        ].join('');
+
+        const icon: google.maps.Icon = {
+          url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svgStr),
+          scaledSize: new google.maps.Size(32, 44),
+          anchor: new google.maps.Point(16, 44),
+        };
+
+        const marker = new google.maps.Marker({
+          position: { lat: Number(pin.lat), lng: Number(pin.lng) },
+          map: mapInstanceRef.current,
+          title: pin.title,
+          icon
+        });
+        markersRef.current.push(marker);
+      } catch (err) {
+        console.error('Failed to add pin marker to preview map:', err);
+      }
+    });
+  }, [pins, placesReady, mapsLoaded]);
+
+  useEffect(() => {
+    if (!mapsLoaded || !placesReady || !directionsServiceRef.current || !directionsRendererRef.current) return;
+
+    // Resolve Origin
+    let origin: any = null;
+    if (useCurrentLocation && currentLatLng) {
+      origin = new google.maps.LatLng(currentLatLng.lat, currentLatLng.lng);
+    } else if (startLatLng) {
+      origin = new google.maps.LatLng(startLatLng.lat, startLatLng.lng);
+    } else if (startPlace?.geometry?.location) {
+      origin = startPlace.geometry.location;
+    } else if (startAddress.trim()) {
+      origin = startAddress.trim();
+    }
+
+    // Resolve Destination
+    let destination: any = null;
+    if (destLatLng) {
+      destination = new google.maps.LatLng(destLatLng.lat, destLatLng.lng);
+    } else if (destPlace?.geometry?.location) {
+      destination = destPlace.geometry.location;
+    } else if (destAddress.trim()) {
+      destination = destAddress.trim();
+    }
+
+    if (!origin || !destination) {
+      directionsRendererRef.current.setDirections({ routes: [] } as any);
+      return;
+    }
+
+    const gmTravelMode = {
+      DRIVING: google.maps.TravelMode.DRIVING,
+      MOTOR: google.maps.TravelMode.DRIVING,
+      WALKING: google.maps.TravelMode.WALKING,
+      TRANSIT: google.maps.TravelMode.TRANSIT,
+      BICYCLING: google.maps.TravelMode.BICYCLING,
+    }[travelMode] ?? google.maps.TravelMode.DRIVING;
+
+    directionsServiceRef.current.route(
+      {
+        origin,
+        destination,
+        travelMode: gmTravelMode,
+      },
+      (result, status) => {
+        if (status === google.maps.DirectionsStatus.OK && result && directionsRendererRef.current) {
+          directionsRendererRef.current.setDirections(result);
+        } else {
+          directionsRendererRef.current?.setDirections({ routes: [] } as any);
+        }
+      }
+    );
+  }, [
+    placesReady,
+    startAddress,
+    destAddress,
+    startPlace,
+    destPlace,
+    startLatLng,
+    destLatLng,
+    useCurrentLocation,
+    currentLatLng,
+    travelMode,
+    mapsLoaded,
+  ]);
+
+  return (
+    <div className="relative w-full h-48 rounded-2xl border border-gray-200 overflow-hidden bg-gray-50 mb-3 shadow-inner">
+      <div ref={mapRef} className="absolute inset-0" />
+      {(!useCurrentLocation && !startAddress.trim()) || !destAddress.trim() ? (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50/90 text-gray-400 p-4 text-center z-10 pointer-events-none">
+          <Map size={24} className="mb-1.5" />
+          <p className="text-[12px] font-semibold">Enter start & destination points</p>
+          <p className="text-[10px] text-gray-400 mt-0.5">to preview the route path</p>
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 /* ─────────────────────────────────────────────────────────────
    AddRouteModal
-───────────────────────────────────────────────────────────── */
-export function AddRouteModal({ onClose, onSave, editRoute }: Props) {
+   ───────────────────────────────────────────────────────────── */
+export function AddRouteModal({ onClose, onSave, pins, editRoute }: Props) {
   const [routeName, setRouteName] = useState(editRoute?.name ?? '');
   const [startAddress, setStartAddress] = useState(editRoute?.from ?? '');
   const [destAddress, setDestAddress] = useState(editRoute?.to ?? '');
   const [startPlace, setStartPlace] = useState<google.maps.places.PlaceResult | null>(null);
   const [destPlace, setDestPlace] = useState<google.maps.places.PlaceResult | null>(null);
-  const [startLatLng, setStartLatLng] = useState<{ lat: number; lng: number } | null>(null);
-  const [destLatLng, setDestLatLng] = useState<{ lat: number; lng: number } | null>(null);
+  const [startLatLng, setStartLatLng] = useState<{ lat: number; lng: number } | null>(() => {
+    if (editRoute?.routePath && editRoute.routePath.length > 0) return editRoute.routePath[0];
+    return null;
+  });
+  const [destLatLng, setDestLatLng] = useState<{ lat: number; lng: number } | null>(() => {
+    if (editRoute?.routePath && editRoute.routePath.length > 0) return editRoute.routePath[editRoute.routePath.length - 1];
+    return null;
+  });
   const [useCurrentLocation, setUseCurrentLocation] = useState(false);
   const [currentLatLng, setCurrentLatLng] = useState<{ lat: number; lng: number } | null>(null);
-  const [travelMode, setTravelMode] = useState<string>('DRIVING');
-  const [avoidOptions, setAvoidOptions] = useState<string[]>([]);
+  const [travelMode, setTravelMode] = useState<string>(editRoute?.travelMode ?? 'DRIVING');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
@@ -279,19 +490,34 @@ export function AddRouteModal({ onClose, onSave, editRoute }: Props) {
 
   const canSave = hasValidStart && hasValidDest;
 
-  const toggleOption = (key: string) => {
-    setAvoidOptions(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]);
-    setCalculatedRoutes([]); // Reset alternatives on option change
-  };
+
 
   /* GPS current location */
   useEffect(() => {
-    if (!useCurrentLocation) { setCurrentLatLng(null); setStartAddress(''); return; }
+    if (!useCurrentLocation) { 
+      // Only wipe startAddress if we were previously using current location
+      if (currentLatLng) setStartAddress('');
+      setCurrentLatLng(null); 
+      return; 
+    }
     navigator.geolocation?.getCurrentPosition(
       pos => {
         const { latitude: lat, longitude: lng } = pos.coords;
         setCurrentLatLng({ lat, lng });
-        setStartAddress(`${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+        
+        if (window.google?.maps?.Geocoder) {
+          const geocoder = new google.maps.Geocoder();
+          geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+            if (status === 'OK' && results && results[0]) {
+              setStartAddress(results[0].formatted_address);
+            } else {
+              setStartAddress(`${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+            }
+          });
+        } else {
+          setStartAddress(`${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+        }
+        
         setStartPlace(null);
         setStartLatLng(null);
         setCalculatedRoutes([]);
@@ -325,25 +551,17 @@ export function AddRouteModal({ onClose, onSave, editRoute }: Props) {
     if (!destination) throw new Error('Please re-select the destination from the dropdown or pin it on the map.');
 
     const gmTravelMode = {
-      DRIVING:   google.maps.TravelMode.DRIVING,
-      WALKING:   google.maps.TravelMode.WALKING,
+      DRIVING: google.maps.TravelMode.DRIVING,
+      WALKING: google.maps.TravelMode.WALKING,
       BICYCLING: google.maps.TravelMode.BICYCLING,
-      TRANSIT:   google.maps.TravelMode.TRANSIT,
+      TRANSIT: google.maps.TravelMode.TRANSIT,
+      MOTOR: google.maps.TravelMode.DRIVING,
     }[travelMode] ?? google.maps.TravelMode.DRIVING;
-
-    const avoidTolls    = avoidOptions.includes('avoid-tolls');
-    const avoidHighways = avoidOptions.includes('avoid-highways');
-    const avoidFerries  = avoidOptions.includes('avoid-ferries');
-    const avoidIndoor   = avoidOptions.includes('avoid-indoor');
 
     return await directionsService.route({
       origin,
       destination,
       travelMode: gmTravelMode,
-      avoidTolls,
-      avoidHighways,
-      avoidFerries,
-      avoidIndoor,
       provideRouteAlternatives: provideAlternatives,
     });
   };
@@ -357,10 +575,28 @@ export function AddRouteModal({ onClose, onSave, editRoute }: Props) {
       if (!result.routes || result.routes.length === 0) {
         throw new Error('No routes found.');
       }
-      setCalculatedRoutes(result.routes);
+
+      const routesWithSafety = result.routes.map((route: any) => {
+        let hazardCount = 0;
+        const pathPoints = route.overview_path || [];
+        pins.forEach(pin => {
+          const isNearRoute = pathPoints.some((pt: any) => {
+            const distance = getDistance(pin.lat, pin.lng, pt.lat(), pt.lng());
+            return distance <= 300;
+          });
+          if (isNearRoute) {
+            hazardCount++;
+          }
+        });
+        return { ...route, hazardCount };
+      });
+
+      routesWithSafety.sort((a: any, b: any) => a.hazardCount - b.hazardCount);
+
+      setCalculatedRoutes(routesWithSafety);
       setSelectedRouteIndex(0);
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'Failed to calculate alternative routes.';
+      const msg = e instanceof Error ? e.message : 'Failed to calculate safest routes.';
       setError(msg);
     } finally {
       setCalculatingAlternatives(false);
@@ -374,11 +610,24 @@ export function AddRouteModal({ onClose, onSave, editRoute }: Props) {
 
     try {
       let chosenRoute = calculatedRoutes[selectedRouteIndex];
-      
+
       // If routes haven't been pre-calculated, fetch the default route now
       if (!chosenRoute) {
         const result = await fetchRoutes(false);
         chosenRoute = result.routes[0];
+
+        let hazardCount = 0;
+        const pathPoints = chosenRoute?.overview_path || [];
+        pins.forEach(pin => {
+          const isNearRoute = pathPoints.some((pt: any) => {
+            const distance = getDistance(pin.lat, pin.lng, pt.lat(), pt.lng());
+            return distance <= 300;
+          });
+          if (isNearRoute) {
+            hazardCount++;
+          }
+        });
+        chosenRoute.hazardCount = hazardCount;
       }
 
       const leg = chosenRoute?.legs?.[0];
@@ -409,7 +658,7 @@ export function AddRouteModal({ onClose, onSave, editRoute }: Props) {
         distance: leg.distance?.text ?? '—',
         duration: leg.duration?.text ?? '—',
         lastEdited,
-        nearbyReports: 0, // computed live in RoutesView from current pins
+        nearbyReports: chosenRoute.hazardCount ?? 0,
         travelMode,
         routePath,
       };
@@ -481,78 +730,113 @@ export function AddRouteModal({ onClose, onSave, editRoute }: Props) {
                   value={routeName}
                   onChange={e => setRouteName(e.target.value)}
                   placeholder="e.g., Home → Work"
-                  className="w-full border border-gray-200 rounded-xl px-3.5 py-3 text-[13px] bg-gray-50 placeholder-gray-400 focus:outline-none focus:border-blue-400 focus:bg-white transition-colors"
+                  className="w-full border border-gray-200 rounded-xl px-3.5 py-3 text-[13px] text-black bg-gray-50 placeholder-gray-400 focus:outline-none focus:border-blue-400 focus:bg-white transition-colors"
                 />
               </div>
 
-              {/* ── Start Point ── */}
+              {/* ── Route Points (Compact Connector Layout) ── */}
               <div>
-                <SectionLabel>Start Point</SectionLabel>
-                <div className="mb-2">
-                  <PlacesInput
-                    placeholder="Search for a place…"
-                    value={startAddress}
-                    onChange={v => { setStartAddress(v); setStartLatLng(null); }}
-                    onPlaceSelected={p => { setStartPlace(p); setStartLatLng(null); setUseCurrentLocation(false); }}
-                    disabled={useCurrentLocation}
-                    placesReady={placesReady}
-                  />
-                </div>
-                {/* Controls row */}
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <Navigation size={12} className="text-blue-500 flex-shrink-0" />
-                    <span className="text-[12px] text-gray-600 font-medium">Current Location</span>
-                    <Toggle value={useCurrentLocation} onChange={setUseCurrentLocation} />
+                <SectionLabel>Route Points</SectionLabel>
+                <div className="bg-gray-50 border border-gray-200 rounded-2xl p-3 flex gap-3 relative shadow-inner">
+                  {/* Visual timeline connector */}
+                  <div className="flex flex-col items-center justify-between py-3 flex-shrink-0">
+                    <div className="w-2.5 h-2.5 rounded-full border border-green-500 bg-white flex items-center justify-center">
+                      <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                    </div>
+                    <div className="w-[1px] flex-1 bg-gray-200 my-1" />
+                    <div className="w-2.5 h-2.5 rounded-full border border-blue-600 bg-white flex items-center justify-center">
+                      <div className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                    </div>
                   </div>
-                  <button
-                    onClick={() => setMapPicker('start')}
-                    disabled={useCurrentLocation}
-                    className="flex items-center gap-1.5 text-[12px] font-semibold text-blue-600 bg-blue-50 border border-blue-200 rounded-full px-3 py-1.5 hover:bg-blue-100 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    <Map size={12} />
-                    Pin on Map
-                  </button>
+
+                  {/* Input stacking */}
+                  <div className="flex-1 space-y-3">
+                    {/* Start Input Group */}
+                    <div className="relative">
+                      <PlacesInput
+                        placeholder="Choose starting point..."
+                        value={startAddress}
+                        onChange={v => { setStartAddress(v); setStartLatLng(null); }}
+                        onPlaceSelected={p => { setStartPlace(p); setStartLatLng(null); setUseCurrentLocation(false); }}
+                        disabled={useCurrentLocation}
+                        placesReady={placesReady}
+                        className="w-full border border-gray-200 rounded-xl pl-3 pr-20 py-2.5 text-[12px] text-black bg-white placeholder-gray-400 focus:outline-none focus:border-blue-400 transition-colors disabled:opacity-50"
+                      />
+                      <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setUseCurrentLocation(!useCurrentLocation)}
+                          title="Use current location"
+                          className={`p-1.5 rounded-lg border transition-all ${useCurrentLocation ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-gray-50 border-gray-100 text-gray-500 hover:bg-gray-100 hover:text-gray-800'}`}
+                        >
+                          <Navigation size={12} className={useCurrentLocation ? "animate-pulse" : ""} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setMapPicker('start')}
+                          disabled={useCurrentLocation}
+                          title="Pin on Map"
+                          className="p-1.5 rounded-lg border bg-gray-50 border-gray-100 text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition-all disabled:opacity-40"
+                        >
+                          <Map size={12} />
+                        </button>
+                      </div>
+                      {startLatLng && !useCurrentLocation && (
+                        <p className="absolute left-3 -bottom-4 text-[9px] text-blue-600 font-semibold flex items-center gap-0.5 pointer-events-none">
+                          <MapPinIcon size={8} /> Pinned
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Destination Input Group */}
+                    <div className="relative">
+                      <PlacesInput
+                        placeholder="Choose destination..."
+                        value={destAddress}
+                        onChange={v => { setDestAddress(v); setDestLatLng(null); }}
+                        onPlaceSelected={p => { setDestPlace(p); setDestLatLng(null); }}
+                        placesReady={placesReady}
+                        className="w-full border border-gray-200 rounded-xl pl-3 pr-10 py-2.5 text-[12px] text-black bg-white placeholder-gray-400 focus:outline-none focus:border-blue-400 transition-colors"
+                      />
+                      <div className="absolute right-1.5 top-1/2 -translate-y-1/2">
+                        <button
+                          type="button"
+                          onClick={() => setMapPicker('dest')}
+                          title="Pin on Map"
+                          className="p-1.5 rounded-lg border bg-gray-50 border-gray-100 text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition-all"
+                        >
+                          <Map size={12} />
+                        </button>
+                      </div>
+                      {destLatLng && (
+                        <p className="absolute left-3 -bottom-4 text-[9px] text-blue-600 font-semibold flex items-center gap-0.5 pointer-events-none">
+                          <MapPinIcon size={8} /> Pinned
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                {startLatLng && !useCurrentLocation && (
-                  <p className="mt-1.5 flex items-center gap-1 text-[11px] text-blue-600 font-semibold">
-                    <MapPinIcon size={10} /> Pinned on map
-                  </p>
-                )}
               </div>
 
-              {/* ── Destination ── */}
-              <div>
-                <SectionLabel>Destination</SectionLabel>
-                <div className="mb-2">
-                  <PlacesInput
-                    placeholder="Search for a place…"
-                    value={destAddress}
-                    onChange={v => { setDestAddress(v); setDestLatLng(null); }}
-                    onPlaceSelected={p => { setDestPlace(p); setDestLatLng(null); }}
-                    placesReady={placesReady}
-                  />
-                </div>
-                <div className="flex justify-end">
-                  <button
-                    onClick={() => setMapPicker('dest')}
-                    className="flex items-center gap-1.5 text-[12px] font-semibold text-blue-600 bg-blue-50 border border-blue-200 rounded-full px-3 py-1.5 hover:bg-blue-100 transition-colors cursor-pointer"
-                  >
-                    <Map size={12} />
-                    Pin on Map
-                  </button>
-                </div>
-                {destLatLng && (
-                  <p className="mt-1.5 flex items-center gap-1 text-[11px] text-blue-600 font-semibold">
-                    <MapPinIcon size={10} /> Pinned on map
-                  </p>
-                )}
-              </div>
+              {/* Route Preview Map */}
+              <RoutePreviewMap
+                startAddress={startAddress}
+                destAddress={destAddress}
+                startPlace={startPlace}
+                destPlace={destPlace}
+                startLatLng={startLatLng}
+                destLatLng={destLatLng}
+                useCurrentLocation={useCurrentLocation}
+                currentLatLng={currentLatLng}
+                travelMode={travelMode}
+                placesReady={placesReady}
+                pins={pins}
+              />
 
               {/* Route Options */}
               <div>
                 <SectionLabel>Travel Mode</SectionLabel>
-                <div className="grid grid-cols-4 gap-1.5 mb-4">
+                <div className="grid grid-cols-5 gap-1.5 mb-4">
                   {TRAVEL_MODES.map(m => {
                     const active = travelMode === m.key;
                     return (
@@ -572,28 +856,9 @@ export function AddRouteModal({ onClose, onSave, editRoute }: Props) {
                   })}
                 </div>
 
-                <SectionLabel>Avoid</SectionLabel>
-                <div className="flex gap-2 flex-wrap">
-                  {AVOID_OPTIONS.map(opt => {
-                    const active = avoidOptions.includes(opt.key);
-                    return (
-                      <button
-                        key={opt.key}
-                        onClick={() => toggleOption(opt.key)}
-                        className="px-3 py-1.5 rounded-full text-[12px] font-medium border transition-colors cursor-pointer"
-                        style={active
-                          ? { background: '#eff6ff', borderColor: '#93c5fd', color: '#1d4ed8' }
-                          : { background: 'white', borderColor: '#e5e7eb', color: '#374151' }
-                        }
-                      >
-                        {opt.label}
-                      </button>
-                    );
-                  })}
-                </div>
               </div>
 
-              {/* Find alternative routes button */}
+              {/* Find Safest Route button */}
               <div className="pt-2">
                 <button
                   type="button"
@@ -602,9 +867,9 @@ export function AddRouteModal({ onClose, onSave, editRoute }: Props) {
                   className="w-full py-2.5 rounded-xl border border-blue-200 text-blue-600 bg-blue-50/50 hover:bg-blue-50 text-[13px] font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {calculatingAlternatives ? (
-                    <><Loader2 size={14} className="animate-spin" /> Fetching Alternatives…</>
+                    <><Loader2 size={14} className="animate-spin" /> Analyzing Safety…</>
                   ) : (
-                    '🔍 Find Alternative Routes'
+                    '🛡️ Find Safest Route'
                   )}
                 </button>
               </div>
@@ -629,8 +894,8 @@ export function AddRouteModal({ onClose, onSave, editRoute }: Props) {
                           }
                         >
                           <div className="flex flex-col">
-                            <span className={`font-semibold ${selected ? 'text-blue-600' : 'text-gray-700'}`}>
-                              Option {idx + 1} {idx === 0 ? '(Recommended)' : ''}
+                            <span className={`font-semibold flex items-center gap-1.5 ${selected ? 'text-blue-600' : 'text-gray-700'}`}>
+                              Option {idx + 1} {r.hazardCount === 0 ? '🛡️ Safe Route' : `(⚠️ ${r.hazardCount} Hazard${r.hazardCount > 1 ? 's' : ''})`}
                             </span>
                             <span className="text-[11px] text-gray-400">Via {r.summary || 'Main road'}</span>
                           </div>

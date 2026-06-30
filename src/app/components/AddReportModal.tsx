@@ -10,7 +10,8 @@ const GOOGLE_MAPS_API_KEY = 'AIzaSyB2WFoRbVp3HPXHotn27e600KWnHJZZQ80';
 
 interface Props {
   onClose: () => void;
-  onSubmit: (reportData: { type: string; address: string; description: string; lat: number; lng: number }) => void;
+  onSubmit: (reportData: { type: string; address: string; description: string; lat: number; lng: number; photos?: string[]; radius?: number }) => void;
+  initialData?: UserReport;
 }
 
 const CATEGORIES = [
@@ -424,10 +425,38 @@ export function AddReportModal({ onClose, onSubmit }: Props) {
                 className="w-full py-4 rounded-2xl text-white text-[16px] font-bold active:opacity-90 transition-opacity cursor-pointer shadow-lg"
                 style={{ backgroundColor: '#2563EB' }}
               >
-                Submit Report
+                {initialData ? 'Save Changes' : 'Submit Report'}
               </button>
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isCameraOpen && (
+          <CameraView 
+            onCapture={(dataUrl) => {
+              setPhotos(prev => [...prev, dataUrl]);
+              setIsCameraOpen(false);
+            }} 
+            onClose={() => setIsCameraOpen(false)} 
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isMapPickerOpen && (
+          <LocationPickerModal
+            initialLocation={userLocation}
+            initialRadius={radius}
+            onClose={() => setIsMapPickerOpen(false)}
+            onConfirm={(loc, addr, rad) => {
+              setUserLocation(loc);
+              setAddress(addr);
+              if (rad !== undefined) setRadius(rad);
+              setIsMapPickerOpen(false);
+            }}
+          />
         )}
       </AnimatePresence>
     </motion.div>
