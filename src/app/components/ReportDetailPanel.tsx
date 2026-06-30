@@ -121,7 +121,9 @@ export function ReportDetailPanel({ pin, onClose, currentUser, onCommentAdded, o
   const hazardLvl = pin.hazardLevel || 'needs-attention';
   const hazardColor = HAZARD_COLORS[hazardLvl as HazardLevel] || HAZARD_COLORS['needs-attention'];
   const { bg, label: hazardLabel } = hazardColor;
-  const { label: statusLabel, Icon: StatusIcon, color: statusColor } = statusConfig[pinStatus];
+  
+  const safeStatus = pinStatus && statusConfig[pinStatus] ? pinStatus : 'pending';
+  const { label: statusLabel, Icon: StatusIcon, color: statusColor } = statusConfig[safeStatus];
 
   const CATEGORIES: Record<string, string> = {
     'flood': 'Flood',
