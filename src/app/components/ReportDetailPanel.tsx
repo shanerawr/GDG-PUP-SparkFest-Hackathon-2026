@@ -371,6 +371,18 @@ export function ReportDetailPanel({ pin, onClose, currentUser, onCommentAdded, o
                     setUpvoted(true);
                     setUpvotes((v) => v + 1);
                     fetch(`/api/pins/${pin.id}/upvote`, { method: 'POST' }).catch((err) => console.error(err));
+                  } else {
+                    setUpvoted(false);
+                    setUpvotes((v) => Math.max(0, v - 1));
+                    fetch(`/api/pins/${pin.id}/unupvote`, { method: 'POST' }).catch((err) => console.error(err));
+                  }
+                }}
+                onDoubleClick={(e) => {
+                  e.stopPropagation();
+                  if (upvoted) {
+                    setUpvoted(false);
+                    setUpvotes((v) => Math.max(0, v - 1));
+                    fetch(`/api/pins/${pin.id}/unupvote`, { method: 'POST' }).catch((err) => console.error(err));
                   }
                 }}
                 className="flex items-center gap-1 text-[13px] font-bold active:scale-95 transition-transform cursor-pointer"
