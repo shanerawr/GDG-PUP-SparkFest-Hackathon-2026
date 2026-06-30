@@ -14,10 +14,10 @@ interface Props {
 function StatusBadge({ status }: { status: string }) {
   const isResolved = status === 'resolved';
   const displayStatus = isResolved ? 'Resolved' : 'Active';
-  const colors = isResolved 
+  const colors = isResolved
     ? { bg: '#f0fdf4', text: '#16a34a', border: '#bbf7d0' }
     : { bg: '#eff6ff', text: '#2563eb', border: '#bfdbfe' };
-    
+
   return (
     <span
       className="flex-shrink-0 text-[10px] font-bold rounded-full px-2 py-0.5 border"
@@ -29,20 +29,28 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function ReportCard({ report, onEdit, onDelete }: { report: UserReport, onEdit: () => void, onDelete: () => void }) {
+  const title = report.title || report.typeName;
+  const desc = report.description || report.moreDetails;
+  const imageUrl = report.photos && report.photos.length > 0 ? report.photos[0] : null;
+
   return (
-    <div className="flex items-start gap-3 rounded-2xl px-3.5 py-3 mb-3 bg-white border border-gray-100 shadow-sm">
+    <div className="flex items-center gap-3.5 rounded-2xl px-3.5 py-3 mb-3 bg-white border border-gray-100 shadow-sm">
       {/* Thumbnail */}
-      <LandscapeThumb className="w-[72px] h-[72px] rounded-xl flex-shrink-0 object-cover" />
+      {imageUrl ? (
+        <img src={imageUrl} alt="Report" className="w-[84px] h-[84px] rounded-xl flex-shrink-0 object-cover border border-gray-100" />
+      ) : (
+        <LandscapeThumb className="w-[84px] h-[84px] rounded-xl flex-shrink-0 object-cover opacity-60 border border-gray-100" />
+      )}
 
       {/* Content */}
-      <div className="flex-1 min-w-0 flex flex-col justify-between" style={{ minHeight: '72px' }}>
+      <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5" style={{ minHeight: '84px' }}>
         {/* Title + Status + Actions */}
-        <div className="flex items-start justify-between gap-2">
+        <div className="flex items-start justify-between gap-1 mb-0.5">
           <div className="flex-1 min-w-0 flex items-center gap-2">
-            <p className="text-[14px] font-bold text-gray-900 truncate">{report.typeName}</p>
+            <p className="text-[14px] font-bold text-gray-900 truncate leading-tight">{title}</p>
             <StatusBadge status={report.status} />
           </div>
-          <div className="flex items-center gap-1 flex-shrink-0">
+          <div className="flex items-center flex-shrink-0 gap-1">
             <button onClick={onEdit} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer" title="Edit">
               <Pencil size={16} />
             </button>
@@ -53,17 +61,19 @@ function ReportCard({ report, onEdit, onDelete }: { report: UserReport, onEdit: 
         </div>
 
         {/* Details */}
-        <p className="text-[12px] text-gray-600 truncate">{report.moreDetails}</p>
+        {desc && (
+          <p className="text-[12px] text-gray-600 truncate leading-snug">{desc}</p>
+        )}
 
         {/* Date & Time */}
-        <p className="text-[11px] text-gray-500 font-medium">
+        <p className="text-[11px] text-gray-500 font-medium leading-snug mt-auto">
           {report.date} <span className="text-gray-300 mx-1">|</span> {report.time}
         </p>
 
         {/* Location */}
-        <div className="flex items-center gap-1 mt-0.5">
+        <div className="flex items-center gap-1 leading-snug mt-0.5">
           <MapPin size={11} className="text-gray-400 flex-shrink-0" />
-          <p className="text-[11px] text-gray-400 truncate">{report.location}</p>
+          <p className="text-[11px] text-gray-400 truncate">{report.location || report.address}</p>
         </div>
       </div>
     </div>

@@ -306,7 +306,7 @@ function RoutePreviewMap({
         suppressMarkers: false,
       });
       directionsRendererRef.current = directionsRenderer;
-      
+
       setMapsLoaded(true);
     });
 
@@ -319,7 +319,7 @@ function RoutePreviewMap({
 
   useEffect(() => {
     if (!mapsLoaded || !mapInstanceRef.current || !placesReady) return;
-    
+
     // Clear old markers
     markersRef.current.forEach(m => m.setMap(null));
     markersRef.current = [];
@@ -331,7 +331,7 @@ function RoutePreviewMap({
         const hazardColor = HAZARD_COLORS[hazardLvl as HazardLevel] || HAZARD_COLORS['needs-attention'];
         const { bg } = hazardColor;
         const path = reportSvgPaths[pin.type] ?? reportSvgPaths['other'];
-        
+
         // Build SVG data-URL icon
         const svgStr = [
           `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="44" viewBox="0 0 32 44">`,
@@ -494,17 +494,17 @@ export function AddRouteModal({ onClose, onSave, pins, editRoute }: Props) {
 
   /* GPS current location */
   useEffect(() => {
-    if (!useCurrentLocation) { 
+    if (!useCurrentLocation) {
       // Only wipe startAddress if we were previously using current location
       if (currentLatLng) setStartAddress('');
-      setCurrentLatLng(null); 
-      return; 
+      setCurrentLatLng(null);
+      return;
     }
     navigator.geolocation?.getCurrentPosition(
       pos => {
         const { latitude: lat, longitude: lng } = pos.coords;
         setCurrentLatLng({ lat, lng });
-        
+
         if (window.google?.maps?.Geocoder) {
           const geocoder = new google.maps.Geocoder();
           geocoder.geocode({ location: { lat, lng } }, (results, status) => {
@@ -517,7 +517,7 @@ export function AddRouteModal({ onClose, onSave, pins, editRoute }: Props) {
         } else {
           setStartAddress(`${lat.toFixed(5)}, ${lng.toFixed(5)}`);
         }
-        
+
         setStartPlace(null);
         setStartLatLng(null);
         setCalculatedRoutes([]);

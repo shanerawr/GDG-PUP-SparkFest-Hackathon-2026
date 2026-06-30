@@ -157,7 +157,7 @@ export default function App() {
     setShowAddReport(true);
   };
 
-  const handleAddReportSubmit = (reportData: { type: string; address: string; description: string; lat: number; lng: number; photo?: string; photos?: string[] }) => {
+  const handleAddReportSubmit = (reportData: { type: string; title: string; address: string; description: string; lat: number; lng: number; photo?: string; photos?: string[] }) => {
     if (!currentUser) return;
     
     if (editingReport) {
@@ -167,7 +167,7 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...reportData,
-          title: CATEGORIES.find(c => c.key === reportData.type)?.label || 'Reported Hazard',
+          title: reportData.title,
         }),
       }).then(() => {
         fetchReports(currentUser.username);
@@ -182,7 +182,7 @@ export default function App() {
         },
         body: JSON.stringify({
           ...reportData,
-          title: CATEGORIES.find(c => c.key === reportData.type)?.label || 'Reported Hazard',
+          title: reportData.title,
           reportedBy: currentUser.username,
         }),
       }).then(res => res.json())

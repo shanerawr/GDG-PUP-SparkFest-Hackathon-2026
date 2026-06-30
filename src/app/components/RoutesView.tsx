@@ -22,8 +22,8 @@ function getDistance(a: { lat: number; lng: number }, b: { lat: number; lng: num
   const sin2 =
     Math.sin(dLat / 2) ** 2 +
     Math.cos((a.lat * Math.PI) / 180) *
-      Math.cos((b.lat * Math.PI) / 180) *
-      Math.sin(dLng / 2) ** 2;
+    Math.cos((b.lat * Math.PI) / 180) *
+    Math.sin(dLng / 2) ** 2;
   return R * 2 * Math.asin(Math.sqrt(sin2));
 }
 
@@ -35,8 +35,8 @@ function RouteIcon() {
       style={{ background: '#2563EB' }}
     >
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-        <polyline points="9 22 9 12 15 12 15 22"/>
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+        <polyline points="9 22 9 12 15 12 15 22" />
       </svg>
     </div>
   );
@@ -77,8 +77,8 @@ function RouteCard({
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="rounded-2xl px-4 py-3.5 mb-3"
-      style={{ background: '#FFF9C4' }}
+      className="rounded-2xl px-4 py-3.5 mb-3 border border-gray-100 shadow-sm"
+      style={{ background: '#FFFFFF' }}
     >
       <div className="flex items-start gap-3">
         {/* Content */}
@@ -103,11 +103,21 @@ function RouteCard({
             )}
           </div>
 
-          {/* From → To */}
-          <div className="flex items-center gap-1 text-[12px] text-gray-600 mb-0.5">
-            <span className="truncate">{route.from}</span>
-            <span className="text-gray-400 flex-shrink-0">→</span>
-            <span className="truncate">{route.to}</span>
+          {/* From -> To with vertical connector */}
+          <div className="flex gap-2 mt-2 mb-2">
+            <div className="flex flex-col items-center justify-between py-1 flex-shrink-0">
+              <div className="w-2 h-2 rounded-full border border-green-500 bg-white flex items-center justify-center">
+                <div className="w-1 h-1 rounded-full bg-green-500" />
+              </div>
+              <div className="w-[1px] flex-1 bg-gray-200 my-0.5" />
+              <div className="w-2 h-2 rounded-full border border-blue-600 bg-white flex items-center justify-center">
+                <div className="w-1 h-1 rounded-full bg-blue-600" />
+              </div>
+            </div>
+            <div className="flex-1 min-w-0 flex flex-col gap-1 text-[12px] text-gray-600">
+              <span className="truncate leading-tight">{route.from}</span>
+              <span className="truncate leading-tight">{route.to}</span>
+            </div>
           </div>
 
           {/* Hazard badge */}
@@ -195,8 +205,8 @@ export function RoutesView({ routes, pins, onAddRoute, onDeleteRoute, onEditRout
           <div className="flex flex-col items-center justify-center h-full text-center py-16">
             <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-3" style={{ background: '#FFF9C4' }}>
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                <polyline points="9 22 9 12 15 12 15 22"/>
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                <polyline points="9 22 9 12 15 12 15 22" />
               </svg>
             </div>
             <p className="text-[14px] font-bold text-gray-500">No saved routes yet</p>
