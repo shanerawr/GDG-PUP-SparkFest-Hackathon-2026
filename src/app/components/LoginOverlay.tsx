@@ -127,22 +127,23 @@ export function LoginOverlay({ onLoginSuccess }: Props) {
   };
 
   return (
-    <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-md z-[100] flex flex-col justify-center px-6">
+    <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-md z-[100] flex flex-col justify-center px-6">
       <motion.div
         initial={{ opacity: 0, y: 30, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ type: 'spring', damping: 20 }}
-        className="w-full max-w-[400px] mx-auto bg-white/95 backdrop-blur-lg border border-white/20 rounded-[28px] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.5)] p-7 text-gray-900"
+        className="w-full max-w-[400px] mx-auto border border-[#47B3E8]/35 rounded-[32px] shadow-[0_20px_50px_-15px_rgba(0,0,0,0.3)] p-7 text-gray-900"
+        style={{ background: '#F5F0C0' }}
       >
         <div className="flex flex-col items-center text-center mb-6">
-          <div className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center text-white mb-4 shadow-lg shadow-blue-500/30">
+          <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white mb-4 shadow-lg shadow-[#47B3E8]/30" style={{ background: '#47B3E8' }}>
             <Shield size={28} className="animate-pulse" />
           </div>
           <h2 className="text-[22px] font-extrabold tracking-tight text-slate-900 flex items-center gap-1.5 justify-center">
             BantayBayan
-            <Sparkles size={16} className="text-amber-500" />
+            <Sparkles size={16} className="text-amber-500 fill-amber-500/20" />
           </h2>
-          <p className="text-[12px] text-gray-500 mt-1 max-w-[260px]">
+          <p className="text-[12px] text-gray-600 mt-1 max-w-[260px] font-semibold">
             Community Safety & Infrastructure Hazard Tracker
           </p>
         </div>
@@ -156,7 +157,7 @@ export function LoginOverlay({ onLoginSuccess }: Props) {
         <form onSubmit={handleSubmit} className="space-y-4">
           {isSignUp && (
             <div>
-              <label className="block text-[11px] font-extrabold uppercase tracking-wider text-gray-400 mb-1">
+              <label className="block text-[11px] font-extrabold uppercase tracking-wider text-gray-500 mb-1">
                 Display Name
               </label>
               <div className="relative">
@@ -168,7 +169,7 @@ export function LoginOverlay({ onLoginSuccess }: Props) {
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
                   placeholder="Juan dela Cruz"
-                  className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-10 pr-4 py-3 text-[14px] font-medium text-black focus:outline-none focus:border-blue-500 focus:bg-white transition-colors"
+                  className="w-full bg-white border border-[#47B3E8]/20 rounded-xl pl-10 pr-4 py-3 text-[14px] font-medium text-black focus:outline-none focus:border-[#47B3E8] focus:bg-white transition-colors"
                   required
                 />
               </div>
@@ -176,7 +177,7 @@ export function LoginOverlay({ onLoginSuccess }: Props) {
           )}
 
           <div>
-            <label className="block text-[11px] font-extrabold uppercase tracking-wider text-gray-400 mb-1">
+            <label className="block text-[11px] font-extrabold uppercase tracking-wider text-gray-500 mb-1">
               Username
             </label>
             <div className="relative">
@@ -188,14 +189,14 @@ export function LoginOverlay({ onLoginSuccess }: Props) {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="juandelacruz"
-                className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-9 pr-4 py-3 text-[14px] font-medium text-black focus:outline-none focus:border-blue-500 focus:bg-white transition-colors"
+                className="w-full bg-white border border-[#47B3E8]/20 rounded-xl pl-9 pr-4 py-3 text-[14px] font-medium text-black focus:outline-none focus:border-[#47B3E8] focus:bg-white transition-colors"
                 required
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-[11px] font-extrabold uppercase tracking-wider text-gray-400 mb-1">
+            <label className="block text-[11px] font-extrabold uppercase tracking-wider text-gray-500 mb-1">
               Password
             </label>
             <div className="relative">
@@ -207,7 +208,7 @@ export function LoginOverlay({ onLoginSuccess }: Props) {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-10 pr-10 py-3 text-[14px] font-medium text-black focus:outline-none focus:border-blue-500 focus:bg-white transition-colors"
+                className="w-full bg-white border border-[#47B3E8]/20 rounded-xl pl-10 pr-10 py-3 text-[14px] font-medium text-black focus:outline-none focus:border-[#47B3E8] focus:bg-white transition-colors"
                 required
               />
               <button
@@ -224,7 +225,8 @@ export function LoginOverlay({ onLoginSuccess }: Props) {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-3.5 font-bold text-[14px] flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 active:scale-[0.98] transition-all disabled:opacity-50"
+              className="w-full text-white rounded-xl py-3.5 font-extrabold text-[14px] flex items-center justify-center gap-2 shadow-lg shadow-[#47B3E8]/20 active:scale-[0.98] transition-all disabled:opacity-50 cursor-pointer"
+              style={{ background: '#47B3E8' }}
             >
               {loading ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -255,19 +257,20 @@ export function LoginOverlay({ onLoginSuccess }: Props) {
               setError(null);
               setPassword('');
             }}
-            className="text-[12px] font-bold text-blue-600 hover:text-blue-700 underline underline-offset-2 transition-colors cursor-pointer"
+            className="text-[12px] font-bold hover:text-[#3ea5da] underline underline-offset-2 transition-colors cursor-pointer"
+            style={{ color: '#47B3E8' }}
           >
             {isSignUp ? 'Already have an account? Log In' : "Don't have an account? Sign Up"}
           </button>
         </div>
 
-        <div className="mt-5 pt-4 border-t border-gray-100 flex items-center justify-center gap-4 text-[11px] text-gray-400 font-semibold">
+        <div className="mt-5 pt-4 border-t border-[#47B3E8]/10 flex items-center justify-center gap-4 text-[11px] text-gray-500 font-bold">
           <span className="flex items-center gap-1">
-            <Shield size={12} /> Secure Auth
+            <Shield size={12} className="text-[#47B3E8]" /> Secure Auth
           </span>
-          <span className="w-1.5 h-1.5 bg-gray-200 rounded-full" />
+          <span className="w-1.5 h-1.5 bg-[#47B3E8]/25 rounded-full" />
           <span className="flex items-center gap-1">
-            <FileText size={12} /> GDG SparkFest
+            <FileText size={12} className="text-[#47B3E8]" /> GDG SparkFest
           </span>
         </div>
       </motion.div>

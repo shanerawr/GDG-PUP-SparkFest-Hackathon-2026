@@ -88,6 +88,19 @@ async function seedDatabase() {
     });
     console.log("Seeded initial admin account");
   }
+
+  // Migrate database statuses
+  try {
+    await db.collection('pins').updateMany({ status: 'pending' }, { $set: { status: 'pending-approval' } });
+    await db.collection('pins').updateMany({ status: 'in-progress' }, { $set: { status: 'pending-resolution' } });
+    await db.collection('pins').updateMany({ status: 'acknowledged' }, { $set: { status: 'pending-resolution' } });
+    await db.collection('reports').updateMany({ status: 'pending' }, { $set: { status: 'pending-approval' } });
+    await db.collection('reports').updateMany({ status: 'in-progress' }, { $set: { status: 'pending-resolution' } });
+    await db.collection('reports').updateMany({ status: 'acknowledged' }, { $set: { status: 'pending-resolution' } });
+    console.log("Database statuses successfully migrated to pending-approval and pending-resolution");
+  } catch (err) {
+    console.error("Database migration error:", err);
+  }
 }
 
 // Middleware to ensure database connection in serverless environment
@@ -130,7 +143,7 @@ app.post('/api/pins', async (req, res) => {
       timeAgo: 'Just now',
       upvotes: 0,
       description: req.body.description || '',
-      status: 'pending',
+      status: 'pending-approval',
       threadCount: 0,
       photo: req.body.photo || null,
       photos: req.body.photos || (req.body.photo ? [req.body.photo] : []),
@@ -148,7 +161,7 @@ app.post('/api/pins', async (req, res) => {
       date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
       time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
       location: req.body.address || 'Unknown Location',
-      status: 'pending',
+      status: 'pending-approval',
       photo: req.body.photo || null,
       photos: req.body.photos || (req.body.photo ? [req.body.photo] : []),
       radius: req.body.radius ? Number(req.body.radius) : undefined,
@@ -621,7 +634,7 @@ app.put('/api/pins/:id/status', async (req, res) => {
       return res.status(200).json({ error: "Access denied. Only authorities or LGU responders can change status." });
     }
 
-    if (!['pending', 'acknowledged', 'in-progress', 'resolved'].includes(status)) {
+    if (!['pending-approval', 'pending-resolution', 'resolved', 'pending', 'acknowledged', 'in-progress'].includes(status)) {
       return res.status(200).json({ error: "Invalid status value" });
     }
 
@@ -944,7 +957,7 @@ app.put('/api/accounts/:id/admin-edit', async (req, res) => {
 // Start server locally if not in Vercel serverless environment
 if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
   connectDB().then(() => {
-    app.listen(PORT, () => {
+    app.listen(PORT, '0.0.0.0', () => {
       console.log(`Backend server is running on port ${PORT}`);
     });
   });

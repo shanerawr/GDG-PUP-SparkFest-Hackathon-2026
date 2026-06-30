@@ -63,6 +63,17 @@ function RouteCard({
   );
   const nearbyCount = nearbyPins.length;
 
+  const groupedPins = nearbyPins.reduce((acc, pin) => {
+    const key = `${pin.title}::${pin.address || ''}`;
+    if (!acc[key]) {
+      acc[key] = { ...pin, count: 1 };
+    } else {
+      acc[key].count += 1;
+    }
+    return acc;
+  }, {} as Record<string, MapPin & { count: number }>);
+  const uniqueNearbyPins = Object.values(groupedPins);
+
   const MODE_LABELS: Record<string, string> = {
     DRIVING: '🚗 Car',
     MOTOR: '🛵 Motor',
@@ -174,11 +185,16 @@ function RouteCard({
             exit={{ height: 0, opacity: 0 }}
             className="mt-3 pt-3 border-t border-yellow-300 space-y-1.5 overflow-hidden"
           >
-            {nearbyPins.map((pin) => (
+            {uniqueNearbyPins.map((pin) => (
               <div key={pin.id} className="flex items-start gap-1.5 text-[11px] text-gray-700">
                 <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" />
                 <div>
                   <span className="font-bold">{pin.title}</span>
+                  {pin.count > 1 && (
+                    <span className="ml-1 text-[9px] font-extrabold bg-red-100 text-red-600 rounded px-1.5 py-0.5">
+                      x{pin.count}
+                    </span>
+                  )}
                   <span className="text-gray-400 ml-1.5 text-[10px]">({pin.address || 'nearby'})</span>
                 </div>
               </div>

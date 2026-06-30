@@ -13,11 +13,26 @@ interface Props {
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const isResolved = status === 'resolved';
-  const displayStatus = isResolved ? 'Resolved' : 'Active';
-  const colors = isResolved
-    ? { bg: '#f0fdf4', text: '#16a34a', border: '#bbf7d0' }
-    : { bg: '#eff6ff', text: '#2563eb', border: '#bfdbfe' };
+  const labelMap: Record<string, string> = {
+    'pending-approval': 'Pending Approval',
+    'pending-resolution': 'Pending Resolution',
+    resolved: 'Resolved',
+    pending: 'Pending Approval',
+    'in-progress': 'Pending Resolution',
+    acknowledged: 'Pending Resolution',
+  };
+
+  const colorMap: Record<string, { bg: string; text: string; border: string }> = {
+    'pending-approval': { bg: '#f3f4f6', text: '#4b5563', border: '#e5e7eb' },
+    'pending-resolution': { bg: '#fff7ed', text: '#ea580c', border: '#fed7aa' },
+    resolved: { bg: '#f0fdf4', text: '#16a34a', border: '#bbf7d0' },
+    pending: { bg: '#f3f4f6', text: '#4b5563', border: '#e5e7eb' },
+    'in-progress': { bg: '#fff7ed', text: '#ea580c', border: '#fed7aa' },
+    acknowledged: { bg: '#fff7ed', text: '#ea580c', border: '#fed7aa' },
+  };
+
+  const displayStatus = labelMap[status] || 'Pending Approval';
+  const colors = colorMap[status] || colorMap['pending-approval'];
 
   return (
     <span
@@ -116,6 +131,35 @@ export function ReportsView({
   onBack,
 }: Props) {
   const isAdmin = currentUser?.role === 'admin';
+  const isResponder = currentUser?.role === 'lgu' || currentUser?.role === 'authority';
+  const govCategory = currentUser?.governmentCategory?.toLowerCase();
+
+  const filteredReports = reports.filter(r => {
+    if (isAdmin) return true;
+    if (isResponder) {
+      if (!govCategory) return false;
+      const type = r.typeKey || (r as any).type;
+      switch (type) {
+        case 'infrastructure':
+          return govCategory === 'lgu';
+        case 'peace-and-order':
+          return govCategory === 'pnp' || govCategory === 'barangay';
+        case 'utility-outages':
+          return govCategory === 'lgu' || govCategory === 'barangay';
+        case 'flood':
+        case 'fire':
+          return govCategory === 'drrmo' || govCategory === 'lgu' || govCategory === 'bfp' || govCategory === 'barangay';
+        case 'waste-collection':
+          return govCategory === 'lgu' || govCategory === 'barangay';
+        case 'road-damage':
+        case 'other':
+          return govCategory === 'lgu';
+        default:
+          return false;
+      }
+    }
+    return true; // Citizens see their own
+  });
 
   return (
     <div
@@ -123,11 +167,11 @@ export function ReportsView({
       style={{ background: '#F5F0C0' }}
     >
       {/* Header */}
-      <PanelHeader title={isAdmin ? "Reports" : "My Reports"} onBack={onBack} />
+      <PanelHeader title={isAdmin || isResponder ? "Reports" : "My Reports"} onBack={onBack} />
 
       {/* List */}
       <div className="flex-1 overflow-y-auto px-4 pb-28">
-        {reports.length === 0 ? (
+        {filteredReports.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center py-16">
             <div
               className="w-16 h-16 rounded-2xl flex items-center justify-center mb-3"
@@ -137,11 +181,11 @@ export function ReportsView({
             </div>
             <p className="text-[14px] font-bold text-gray-500">No reports yet</p>
             <p className="text-[12px] text-gray-400 mt-1">
-              {isAdmin ? "There are no reports submitted in the system." : "Tap + to submit your first hazard report"}
+              {isAdmin || isResponder ? "There are no reports submitted in the system for your department." : "Tap + to submit your first hazard report"}
             </p>
           </div>
         ) : (
-          reports.map((r) => (
+          filteredReports.map((r) => (
             <ReportCard
               key={r.id}
               report={r}
@@ -153,8 +197,8 @@ export function ReportsView({
         )}
       </div>
 
-      {/* FAB - Hide for admins */}
-      {!isAdmin && (
+      {/* FAB - Hide for admins and responders */}
+      {!isAdmin && currentUser?.role !== 'lgu' && currentUser?.role !== 'authority' && (
         <button
           id="add-report-fab"
           onClick={onAddReport}

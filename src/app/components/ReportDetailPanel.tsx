@@ -102,10 +102,13 @@ interface Props {
 }
 
 const statusConfig = {
-  pending: { label: 'Pending', Icon: Clock, color: '#6b7280' },
-  acknowledged: { label: 'Acknowledged', Icon: CheckCircle, color: '#2563eb' },
-  'in-progress': { label: 'In Progress', Icon: RefreshCw, color: '#d97706' },
+  'pending-approval': { label: 'Pending Approval', Icon: Clock, color: '#6b7280' },
+  'pending-resolution': { label: 'Pending Resolution', Icon: RefreshCw, color: '#d97706' },
   resolved: { label: 'Resolved', Icon: CheckCircle, color: '#16a34a' },
+  // For legacy data fallback:
+  pending: { label: 'Pending Approval', Icon: Clock, color: '#6b7280' },
+  'in-progress': { label: 'Pending Resolution', Icon: RefreshCw, color: '#d97706' },
+  acknowledged: { label: 'Pending Resolution', Icon: RefreshCw, color: '#d97706' },
 };
 
 export function ReportDetailPanel({ pin, onClose, currentUser, onCommentAdded, onStatusUpdated }: Props) {
@@ -117,20 +120,33 @@ export function ReportDetailPanel({ pin, onClose, currentUser, onCommentAdded, o
   const [flaggingCommentId, setFlaggingCommentId] = useState<string | null>(null);
   const [loadingComments, setLoadingComments] = useState(true);
   const [pinStatus, setPinStatus] = useState<ReportStatus>(pin.status);
+  const [shared, setShared] = useState(false);
+
+  const handleShare = () => {
+    const shareUrl = `${window.location.origin}?pinId=${pin.id}`;
+    navigator.clipboard.writeText(shareUrl)
+      .then(() => {
+        setShared(true);
+        setTimeout(() => setShared(false), 2000);
+      })
+      .catch((err) => console.error('Failed to copy share link:', err));
+  };
 
   const hazardLvl = pin.hazardLevel || 'needs-attention';
   const hazardColor = HAZARD_COLORS[hazardLvl as HazardLevel] || HAZARD_COLORS['needs-attention'];
   const { bg, label: hazardLabel } = hazardColor;
-  const { label: statusLabel, Icon: StatusIcon, color: statusColor } = statusConfig[pinStatus];
+  
+  const safeStatus = pinStatus && statusConfig[pinStatus] ? pinStatus : 'pending';
+  const { label: statusLabel, Icon: StatusIcon, color: statusColor } = statusConfig[safeStatus];
 
   const CATEGORIES: Record<string, string> = {
     'flood': 'Flood',
-    'traffic': 'Traffic',
-    'fallen-pole': 'Fallen Pole',
-    'car-crash': 'Car Crash',
-    'road-work': 'Road Work',
+    'road-damage': 'Road Damage',
+    'peace-and-order': 'Peace and Order',
+    'utility-outages': 'Utility Outages',
+    'waste-collection': 'Waste Collection',
+    'infrastructure': 'Infrastructure & Public Works',
     'fire': 'Fire',
-    'hazard': 'Road Hazard',
     'other': 'Other'
   };
   const categoryName = CATEGORIES[pin.type] || pin.title;
@@ -329,14 +345,17 @@ export function ReportDetailPanel({ pin, onClose, currentUser, onCommentAdded, o
               <div className="flex items-center gap-1 bg-gray-50 border border-gray-200 rounded-xl px-2.5 py-1">
                 <StatusIcon size={11} style={{ color: statusColor }} />
                 <select
-                  value={pinStatus}
+                  value={
+                    pinStatus === 'pending' ? 'pending-approval' :
+                    (pinStatus === 'acknowledged' || pinStatus === 'in-progress') ? 'pending-resolution' :
+                    pinStatus
+                  }
                   onChange={(e) => handleStatusChange(e.target.value as ReportStatus)}
                   className="text-[11.5px] font-bold bg-transparent border-0 outline-none p-0 cursor-pointer focus:ring-0"
                   style={{ color: statusColor }}
                 >
-                  <option value="pending" className="text-gray-700 font-medium">Pending</option>
-                  <option value="acknowledged" className="text-blue-600 font-medium">Acknowledged</option>
-                  <option value="in-progress" className="text-amber-600 font-medium">In Progress</option>
+                  <option value="pending-approval" className="text-gray-700 font-medium">Pending Approval</option>
+                  <option value="pending-resolution" className="text-amber-600 font-medium">Pending Resolution</option>
                   <option value="resolved" className="text-green-600 font-medium">Resolved</option>
                 </select>
               </div>
@@ -391,9 +410,13 @@ export function ReportDetailPanel({ pin, onClose, currentUser, onCommentAdded, o
                 <ThumbsUp size={14} />
                 <span>{upvotes}</span>
               </button>
-              <button className="flex items-center gap-1 text-[13px] font-bold text-gray-500 active:scale-95 transition-transform cursor-pointer">
-                <Share2 size={14} />
-                <span>Share</span>
+              <button
+                onClick={handleShare}
+                className="flex items-center gap-1 text-[13px] font-bold active:scale-95 transition-transform cursor-pointer transition-colors"
+                style={{ color: shared ? '#16a34a' : '#6b7280' }}
+              >
+                {shared ? <CheckCircle size={14} /> : <Share2 size={14} />}
+                <span>{shared ? 'Copied!' : 'Share'}</span>
               </button>
             </div>
           </div>

@@ -93,8 +93,8 @@ export default function App() {
   };
 
   const fetchReports = (username?: string) => {
-    // If no username is passed, but currentUser exists and is NOT admin, use currentUser.username
-    const targetUser = username || (currentUser && currentUser.role !== 'admin' ? currentUser.username : undefined);
+    const isPrivileged = currentUser?.role === 'admin' || currentUser?.role === 'lgu' || currentUser?.role === 'authority';
+    const targetUser = isPrivileged ? undefined : (username || currentUser?.username);
     const url = targetUser ? `/api/reports?username=${targetUser}` : '/api/reports';
     fetch(url)
       .then(res => res.json())
@@ -114,6 +114,20 @@ export default function App() {
   useEffect(() => {
     fetchPins();
   }, []);
+
+  // Support deep linking to a specific pin via ?pinId=...
+  useEffect(() => {
+    if (pins.length > 0 && !detailPin) {
+      const params = new URLSearchParams(window.location.search);
+      const pinId = params.get('pinId');
+      if (pinId) {
+        const found = pins.find(p => p.id === pinId);
+        if (found) {
+          setDetailPin(found);
+        }
+      }
+    }
+  }, [pins]);
 
   // Fetch reports when current user changes/logs in
   useEffect(() => {
@@ -348,6 +362,7 @@ export default function App() {
               onProfileUpdate={handleProfileUpdate}
               onLogout={handleLogout}
               onStartVerification={() => setShowVerification(true)}
+              onBack={() => setActivePanel(null)}
             />
           )}
         </div>
