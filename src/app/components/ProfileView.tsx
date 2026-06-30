@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { CheckCircle, Bell, Globe, Shield, LogOut, ChevronRight, Edit2, Check, Key, Clock, ShieldAlert, Eye, EyeOff, Moon, Settings, X } from 'lucide-react';
+import { CheckCircle, Bell, Globe, Shield, LogOut, ChevronRight, Edit2, Check, Key, Clock, ShieldAlert, Eye, EyeOff, Moon, Settings, X, Trash2, Pencil } from 'lucide-react';
 import type { UserProfile } from '../types';
 
 interface Props {
@@ -538,6 +538,18 @@ function AdminManagementPage({ currentUser }: { currentUser: UserProfile }) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  // Edit state
+  const [editingAccount, setEditingAccount] = useState<UserProfile | null>(null);
+  const [editDisplayName, setEditDisplayName] = useState('');
+  const [editPassword, setEditPassword] = useState('');
+  const [editGovCategory, setEditGovCategory] = useState('');
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+
+  // Delete state
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
   const fetchAuthorities = () => {
     fetch(`/api/accounts/authorities?adminUsername=${currentUser.username}`)
       .then((res) => res.json())
@@ -589,8 +601,174 @@ function AdminManagementPage({ currentUser }: { currentUser: UserProfile }) {
       .finally(() => setLoading(false));
   };
 
+  const openEdit = (auth: UserProfile) => {
+    setDeletingId(null); // clear any open delete confirmation
+    setEditingAccount(auth);
+    setEditDisplayName(auth.displayName || '');
+    setEditPassword('');
+    setEditGovCategory(auth.governmentCategory || 'LGU');
+    setEditError(null);
+  };
+
+  const handleEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingAccount) return;
+    setEditLoading(true);
+    setEditError(null);
+
+    fetch(`/api/accounts/${editingAccount.id}/admin-edit`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        adminUsername: currentUser.username,
+        displayName: editDisplayName.trim(),
+        password: editPassword.trim() || undefined,
+        governmentCategory: editGovCategory,
+        role: editGovCategory === 'LGU' ? 'lgu' : 'authority',
+      }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.error) {
+          setEditError(data.error);
+        } else {
+          setEditingAccount(null);
+          setSuccess(`Account @${data.username} updated!`);
+          fetchAuthorities();
+        }
+      })
+      .catch(() => setEditError('Failed to update account'))
+      .finally(() => setEditLoading(false));
+  };
+
+  const handleDelete = (id: string) => {
+    setDeleteLoading(true);
+    fetch(`/api/accounts/${id}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ adminUsername: currentUser.username }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.error) {
+          setError(data.error);
+        } else {
+          setSuccess('Account deleted.');
+          fetchAuthorities();
+        }
+        setDeletingId(null);
+      })
+      .catch(() => { setError('Failed to delete account'); setDeletingId(null); })
+      .finally(() => setDeleteLoading(false));
+  };
+
+  // Find the account being deleted (for the delete modal)
+  const deletingAccount = authorities.find((a) => a.id === deletingId) ?? null;
+
   return (
     <div className="p-4 space-y-5 bg-gray-50 min-h-full">
+      {/* Delete Confirm Modal */}
+      {deletingAccount && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="px-5 py-5">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center mb-3">
+                <Trash2 size={18} className="text-red-600" />
+              </div>
+              <h3 className="text-[15px] font-extrabold text-slate-800">Delete Account?</h3>
+              <p className="text-[12.5px] text-gray-500 mt-1">
+                Are you sure you want to delete <span className="font-bold text-gray-800">@{deletingAccount.username}</span>? This action cannot be undone.
+              </p>
+            </div>
+            <div className="flex gap-3 px-5 pb-5">
+              <button
+                onClick={() => setDeletingId(null)}
+                disabled={deleteLoading}
+                className="flex-1 border border-gray-200 text-gray-600 rounded-xl py-2.5 font-bold text-[13px] hover:bg-gray-50 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDelete(deletingAccount.id)}
+                disabled={deleteLoading}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white rounded-xl py-2.5 font-bold text-[13px] shadow-md shadow-red-500/20 active:scale-[0.98] transition-all disabled:opacity-50 cursor-pointer"
+              >
+                {deleteLoading ? 'Deleting...' : 'Yes, Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {editingAccount && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <h3 className="text-[15px] font-extrabold text-slate-800">Edit Account</h3>
+                <p className="text-[11px] text-gray-400 mt-0.5">@{editingAccount.username}</p>
+              </div>
+              <button
+                onClick={() => setEditingAccount(null)}
+                className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors cursor-pointer"
+              >
+                <X size={14} />
+              </button>
+            </div>
+            <form onSubmit={handleEdit} className="p-5 space-y-3">
+              {editError && (
+                <p className="text-[11px] font-semibold text-red-600 bg-red-50 p-3 rounded-xl border border-red-100">
+                  {editError}
+                </p>
+              )}
+              <input
+                type="text"
+                placeholder="Display Name"
+                value={editDisplayName}
+                onChange={(e) => setEditDisplayName(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-[13px] font-semibold text-gray-900 focus:outline-none focus:border-blue-500 focus:bg-white transition-colors"
+              />
+              <input
+                type="password"
+                placeholder="New Password (leave blank to keep)"
+                value={editPassword}
+                onChange={(e) => setEditPassword(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-[13px] font-semibold text-gray-900 focus:outline-none focus:border-blue-500 focus:bg-white transition-colors"
+              />
+              <select
+                value={editGovCategory}
+                onChange={(e) => setEditGovCategory(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-[13px] font-bold text-gray-700 focus:outline-none focus:border-blue-500 focus:bg-white transition-colors cursor-pointer"
+              >
+                <option value="LGU">Local Government Unit (LGU)</option>
+                <option value="BFP">Bureau of Fire Protection (BFP)</option>
+                <option value="PNP">Philippine National Police (PNP)</option>
+                <option value="DRRMO">Disaster Risk Reduction (DRRMO)</option>
+                <option value="Barangay">Barangay Responder</option>
+                <option value="DOH">Department of Health (DOH)</option>
+              </select>
+              <div className="flex gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setEditingAccount(null)}
+                  className="flex-1 border border-gray-200 text-gray-600 rounded-xl py-2.5 font-bold text-[13px] hover:bg-gray-50 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={editLoading}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-2.5 font-bold text-[13px] shadow-md shadow-blue-500/10 active:scale-[0.98] transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  {editLoading ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Top Welcome Card */}
       <div className="bg-white rounded-3xl border border-gray-100 p-5 shadow-sm">
         <h3 className="text-[16px] font-extrabold text-slate-800 leading-snug">System Administration</h3>
@@ -678,12 +856,9 @@ function AdminManagementPage({ currentUser }: { currentUser: UserProfile }) {
         {authorities.length === 0 ? (
           <p className="text-[12.5px] text-gray-400 italic bg-slate-50 p-4 rounded-2xl text-center">No responder accounts created yet.</p>
         ) : (
-          <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1">
+          <div className="space-y-2.5">
             {authorities.map((auth) => (
-              <div
-                key={auth.id}
-                className="flex items-center justify-between p-3.5 bg-gray-50 rounded-2xl border border-gray-100 hover:border-gray-200 transition-colors"
-              >
+              <div key={auth.id} className="flex items-center justify-between p-3.5 bg-gray-50 rounded-2xl border border-gray-100 hover:border-gray-200 transition-colors">
                 <div className="min-w-0 flex-1 pr-2">
                   <p className="text-[13px] font-bold text-gray-900 truncate">{auth.displayName}</p>
                   <p className="text-[11px] text-gray-500 font-medium">@{auth.username}</p>
@@ -692,6 +867,22 @@ function AdminManagementPage({ currentUser }: { currentUser: UserProfile }) {
                   <span className="text-[9.5px] font-extrabold bg-blue-50 text-blue-600 border border-blue-100 rounded px-2 py-0.5 uppercase tracking-wider">
                     {auth.governmentCategory || 'LGU'}
                   </span>
+                  {/* Edit button */}
+                  <button
+                    onClick={() => openEdit(auth)}
+                    className="w-7 h-7 rounded-lg bg-blue-50 hover:bg-blue-100 flex items-center justify-center text-blue-600 transition-colors active:scale-90 cursor-pointer"
+                    title="Edit account"
+                  >
+                    <Pencil size={13} />
+                  </button>
+                  {/* Delete button */}
+                  <button
+                    onClick={() => { setEditingAccount(null); setDeletingId(auth.id); }}
+                    className="w-7 h-7 rounded-lg bg-red-50 hover:bg-red-100 flex items-center justify-center text-red-500 transition-colors active:scale-90 cursor-pointer"
+                    title="Delete account"
+                  >
+                    <Trash2 size={13} />
+                  </button>
                 </div>
               </div>
             ))}

@@ -826,6 +826,60 @@ app.post('/api/comments/:id/action', async (req, res) => {
   }
 });
 
+// Admin deletes an authority/LGU account
+app.delete('/api/accounts/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { adminUsername } = req.body;
+
+    // Verify requester is admin
+    const requester = await db.collection('accounts').findOne({ username: adminUsername, role: 'admin' });
+    if (!requester) {
+      return res.status(200).json({ error: 'Only admins can delete accounts.' });
+    }
+
+    // Prevent deleting the admin account itself
+    const target = await db.collection('accounts').findOne({ _id: new ObjectId(id) });
+    if (!target) return res.status(404).json({ error: 'Account not found.' });
+    if (target.role === 'admin') return res.status(200).json({ error: 'Cannot delete the admin account.' });
+
+    await db.collection('accounts').deleteOne({ _id: new ObjectId(id) });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Admin edits an authority/LGU account
+app.put('/api/accounts/:id/admin-edit', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { adminUsername, displayName, password, governmentCategory, role } = req.body;
+
+    // Verify requester is admin
+    const requester = await db.collection('accounts').findOne({ username: adminUsername, role: 'admin' });
+    if (!requester) {
+      return res.status(200).json({ error: 'Only admins can edit accounts.' });
+    }
+
+    const updateData = {};
+    if (displayName !== undefined) updateData.displayName = displayName;
+    if (password !== undefined && password.trim() !== '') updateData.password = password.trim();
+    if (governmentCategory !== undefined) updateData.governmentCategory = governmentCategory;
+    if (role !== undefined) updateData.role = role;
+
+    const result = await db.collection('accounts').findOneAndUpdate(
+      { _id: new ObjectId(id) },
+      { $set: updateData },
+      { returnDocument: 'after' }
+    );
+    if (!result) return res.status(404).json({ error: 'Account not found.' });
+    res.json({ ...result, id: result._id.toString() });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Start server locally if not in Vercel serverless environment
 if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
   connectDB().then(() => {
