@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { setOptions, importLibrary } from '@googlemaps/js-api-loader';
 import {
-  X, Camera, Droplets, Car, Zap, Flame, HardHat, AlertCircle, ImageIcon, CheckCircle,
+  X, Camera, Droplets, Zap, AlertCircle, ImageIcon, CheckCircle, AlertTriangle, Shield, Trash2, HardHat
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { PanelHeader } from './PanelHeader';
@@ -19,11 +19,11 @@ interface Props {
 
 const CATEGORIES = [
   { key: 'flood', label: 'Flood', Icon: Droplets },
-  { key: 'traffic', label: 'Traffic', Icon: Car },
-  { key: 'fallen-pole', label: 'Fallen Pole', Icon: Zap },
-  { key: 'car-crash', label: 'Car Crash', Icon: Car },
-  { key: 'road-work', label: 'Road Work', Icon: HardHat },
-  { key: 'fire', label: 'Fire', Icon: Flame },
+  { key: 'road-damage', label: 'Road Damage', Icon: AlertTriangle },
+  { key: 'peace-and-order', label: 'Peace & Order', Icon: Shield },
+  { key: 'utility-outages', label: 'Utility Outages', Icon: Zap },
+  { key: 'waste-collection', label: 'Waste', Icon: Trash2 },
+  { key: 'infrastructure-and-public-works', label: 'Infra & Public Works', Icon: HardHat },
   { key: 'other', label: 'Other', Icon: AlertCircle },
 ];
 
@@ -214,7 +214,7 @@ function CombinedLocationMap({
 /* ── Main modal ── */
 export function AddReportModal({ onClose, onSubmit, initialData }: Props) {
   const [title, setTitle] = useState(initialData?.title || '');
-  const [category, setCategory] = useState(initialData?.type || 'fallen-pole');
+  const [category, setCategory] = useState(initialData?.type || 'flood');
   const [address, setAddress] = useState(initialData?.address || '');
   const [description, setDescription] = useState(initialData?.description || '');
   const [submitted, setSubmitted] = useState(false);
@@ -222,7 +222,7 @@ export function AddReportModal({ onClose, onSubmit, initialData }: Props) {
   const [pinLng, setPinLng] = useState(initialData?.lng || 120.9842);
   const [radius, setRadius] = useState(initialData?.radius || 200);
   const [showIconPicker, setShowIconPicker] = useState(false);
-  const [hazardLevel, setHazardLevel] = useState<'minor' | 'needs-attention' | 'urgent' | 'critical'>((initialData as any)?.hazardLevel || 'minor');
+  const [hazardLevel, setHazardLevel] = useState<'minor' | 'needs-attention' | 'urgent' | 'life-threatening'>((initialData as any)?.hazardLevel || 'minor');
   const [photos, setPhotos] = useState<string[]>(initialData?.photos || []);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [isMapPickerOpen, setIsMapPickerOpen] = useState(false);
@@ -404,10 +404,10 @@ export function AddReportModal({ onClose, onSubmit, initialData }: Props) {
                 <p className="text-[14px] font-extrabold text-gray-900 mb-1.5">Hazard Level</p>
                 <div className="flex gap-2 flex-wrap">
                   {([
-                    { key: 'minor', label: 'Minor', color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0' },
-                    { key: 'needs-attention', label: 'Needs Attention', color: '#ca8a04', bg: '#fefce8', border: '#fef08a' },
-                    { key: 'urgent', label: 'Urgent', color: '#ea580c', bg: '#fff7ed', border: '#fed7aa' },
-                    { key: 'critical', label: 'Critical', color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
+                    { key: 'minor', label: 'Minor', color: '#ca8a04', bg: '#fefce8', border: '#fef08a' },
+                    { key: 'needs-attention', label: 'Needs Attention', color: '#ea580c', bg: '#fff7ed', border: '#fed7aa' },
+                    { key: 'urgent', label: 'Urgent', color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
+                    { key: 'life-threatening', label: 'Life-Threatening', color: '#991b1b', bg: '#fee2e2', border: '#fca5a5' },
                   ] as const).map(({ key, label, color, bg, border }) => {
                     const active = hazardLevel === key;
                     return (

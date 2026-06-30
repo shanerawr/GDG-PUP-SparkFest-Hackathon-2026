@@ -263,12 +263,11 @@ function MapInner({ pins, activeRoute, onOpenDetail, onClearActiveRoute }: Props
 
       const CATEGORIES: Record<string, string> = {
         'flood': 'Flood',
-        'traffic': 'Traffic',
-        'fallen-pole': 'Fallen Pole',
-        'car-crash': 'Car Crash',
-        'road-work': 'Road Work',
-        'fire': 'Fire',
-        'hazard': 'Road Hazard',
+        'road-damage': 'Road Damage',
+        'peace-and-order': 'Peace and Order',
+        'utility-outages': 'Utility Outages',
+        'waste-collection': 'Waste Collection',
+        'infrastructure-and-public-works': 'Infrastructure & Public Works',
         'other': 'Other'
       };
       

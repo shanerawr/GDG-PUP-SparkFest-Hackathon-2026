@@ -944,7 +944,7 @@ app.put('/api/accounts/:id/admin-edit', async (req, res) => {
 // Start server locally if not in Vercel serverless environment
 if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
   connectDB().then(() => {
-    app.listen(PORT, () => {
+    app.listen(PORT, '0.0.0.0', () => {
       console.log(`Backend server is running on port ${PORT}`);
     });
   });
