@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { setOptions, importLibrary } from '@googlemaps/js-api-loader';
 import type { SavedRoute, MapPin, HazardLevel } from '../types';
 import { HAZARD_COLORS, reportSvgPaths } from '../types';
+import { PanelHeader } from './PanelHeader';
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyB2WFoRbVp3HPXHotn27e600KWnHJZZQ80';
 
@@ -683,7 +684,8 @@ export function AddRouteModal({ onClose, onSave, pins, editRoute }: Props) {
       animate={{ y: 0 }}
       exit={{ y: '100%' }}
       transition={{ type: 'spring', damping: 28, stiffness: 350 }}
-      className="absolute inset-0 bg-white z-50 flex flex-col"
+      className="absolute inset-0 z-50 flex flex-col"
+      style={{ background: '#B8DCE8' }}
     >
       <AnimatePresence mode="wait">
         {saved ? (
@@ -709,16 +711,19 @@ export function AddRouteModal({ onClose, onSave, pins, editRoute }: Props) {
           /* ── Form ── */
           <motion.div key="form" className="flex-1 flex flex-col overflow-hidden">
 
-            {/* Header */}
-            <div className="relative flex items-center justify-center px-4 pt-5 pb-3 border-b border-gray-100 flex-shrink-0">
-              <h1 className="text-[20px] font-extrabold text-gray-900">{isEditMode ? 'Edit Route' : 'New Route'}</h1>
-              <button
-                onClick={onClose}
-                className="absolute right-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 cursor-pointer"
-              >
-                <X size={16} />
-              </button>
-            </div>
+            <PanelHeader
+              title={isEditMode ? 'Edit Route' : 'New Route'}
+              onBack={onClose}
+              bg="#B8DCE8"
+              rightAction={
+                <button
+                  onClick={onClose}
+                  className="w-8 h-8 rounded-full bg-white/60 flex items-center justify-center text-gray-600 active:scale-95 transition-transform cursor-pointer"
+                >
+                  <X size={16} />
+                </button>
+              }
+            />
 
             {/* Body */}
             <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5">
@@ -726,18 +731,20 @@ export function AddRouteModal({ onClose, onSave, pins, editRoute }: Props) {
               {/* Route Name */}
               <div>
                 <SectionLabel>Route Name <span style={{ color: '#ef4444' }}>*</span></SectionLabel>
-                <input
-                  value={routeName}
-                  onChange={e => setRouteName(e.target.value)}
-                  placeholder="e.g., Home → Work"
-                  className="w-full border border-gray-200 rounded-xl px-3.5 py-3 text-[13px] text-black bg-gray-50 placeholder-gray-400 focus:outline-none focus:border-blue-400 focus:bg-white transition-colors"
-                />
+                <div className="flex items-center bg-white rounded-xl px-3.5 py-3 border border-gray-200 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100 transition-all relative">
+                  <input
+                    value={routeName}
+                    onChange={e => setRouteName(e.target.value)}
+                    placeholder="e.g., Home → Work"
+                    className="flex-1 text-[13px] text-gray-900 font-medium focus:outline-none bg-transparent"
+                  />
+                </div>
               </div>
 
               {/* ── Route Points (Compact Connector Layout) ── */}
               <div>
                 <SectionLabel>Route Points <span style={{ color: '#ef4444' }}>*</span></SectionLabel>
-                <div className="bg-gray-50 border border-gray-200 rounded-2xl p-3 flex gap-3 relative shadow-inner">
+                <div className="bg-white/40 border border-white/60 rounded-2xl p-3 flex gap-3 relative">
                   {/* Visual timeline connector */}
                   <div className="flex flex-col items-center justify-between py-3 flex-shrink-0">
                     <div className="w-2.5 h-2.5 rounded-full border border-green-500 bg-white flex items-center justify-center">
@@ -760,7 +767,7 @@ export function AddRouteModal({ onClose, onSave, pins, editRoute }: Props) {
                         onPlaceSelected={p => { setStartPlace(p); setStartLatLng(null); setUseCurrentLocation(false); }}
                         disabled={useCurrentLocation}
                         placesReady={placesReady}
-                        className="w-full border border-gray-200 rounded-xl pl-3 pr-20 py-2.5 text-[12px] text-black bg-white placeholder-gray-400 focus:outline-none focus:border-blue-400 transition-colors disabled:opacity-50"
+                        className="w-full bg-white rounded-xl pl-3 pr-20 py-2.5 text-[13px] text-gray-900 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-400 font-medium disabled:opacity-50"
                       />
                       <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
                         <button
@@ -796,7 +803,7 @@ export function AddRouteModal({ onClose, onSave, pins, editRoute }: Props) {
                         onChange={v => { setDestAddress(v); setDestLatLng(null); }}
                         onPlaceSelected={p => { setDestPlace(p); setDestLatLng(null); }}
                         placesReady={placesReady}
-                        className="w-full border border-gray-200 rounded-xl pl-3 pr-10 py-2.5 text-[12px] text-black bg-white placeholder-gray-400 focus:outline-none focus:border-blue-400 transition-colors"
+                        className="w-full bg-white rounded-xl pl-3 pr-10 py-2.5 text-[13px] text-gray-900 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-400 font-medium"
                       />
                       <div className="absolute right-1.5 top-1/2 -translate-y-1/2">
                         <button
@@ -921,13 +928,13 @@ export function AddRouteModal({ onClose, onSave, pins, editRoute }: Props) {
             </div>
 
             {/* Save button */}
-            <div className="px-4 pt-2 pb-6 bg-white border-t border-gray-100 flex-shrink-0">
+            <div className="absolute bottom-0 left-0 right-0 px-4 pb-6 pt-3">
               <button
                 onClick={handleSave}
                 disabled={saving || !canSave}
-                className="w-full py-4 rounded-2xl text-white text-[16px] font-bold transition-all flex items-center justify-center gap-2"
+                className="w-full py-4 rounded-2xl text-white text-[16px] font-bold transition-all flex items-center justify-center gap-2 shadow-lg"
                 style={{
-                  backgroundColor: (!saving && canSave) ? '#1d4ed8' : '#A0AEC0',
+                  backgroundColor: (!saving && canSave) ? '#2563EB' : '#A0AEC0',
                   cursor: (!saving && canSave) ? 'pointer' : 'not-allowed',
                   opacity: (!saving && canSave) ? 1 : 0.7,
                 }}
