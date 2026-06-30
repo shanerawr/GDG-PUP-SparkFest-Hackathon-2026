@@ -233,7 +233,6 @@ const TRAVEL_MODES = [
   { key: 'MOTOR', label: '🛵 Motor', mode: 'DRIVING' },
   { key: 'TRANSIT', label: '🚌 Transit', mode: 'TRANSIT' },
   { key: 'WALKING', label: '🚶 Walk', mode: 'WALKING' },
-  { key: 'BICYCLING', label: '🚲 Cycle', mode: 'BICYCLING' },
 ];
 
 function getDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -858,7 +857,7 @@ export function AddRouteModal({ onClose, onSave, pins, editRoute }: Props) {
               {/* Route Options */}
               <div>
                 <SectionLabel>Travel Mode</SectionLabel>
-                <div className="grid grid-cols-5 gap-1.5 mb-4">
+                <div className="grid grid-cols-4 gap-1.5 mb-4">
                   {TRAVEL_MODES.map(m => {
                     const active = travelMode === m.key;
                     return (
