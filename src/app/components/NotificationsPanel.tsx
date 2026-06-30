@@ -1,98 +1,94 @@
-import { Trash2, BellOff, CheckCircle } from 'lucide-react';
+import { BellOff, MoreHorizontal } from 'lucide-react';
 import type { AppNotification } from '../types';
+import { LandscapeThumb } from './LandscapeThumb';
+import { PanelHeader } from './PanelHeader';
 
 interface Props {
   notifications: AppNotification[];
   onMarkAllRead: () => void;
   onDeleteNotif: (id: string) => void;
+  onBack: () => void;
 }
 
-function NotifItem({ n, onDelete, onMarkRead }: { n: AppNotification; onDelete: () => void; onMarkRead: () => void }) {
+function NotifItem({
+  n,
+  onDelete,
+  onMarkRead,
+}: {
+  n: AppNotification;
+  onDelete: () => void;
+  onMarkRead: () => void;
+}) {
   return (
     <div
       onClick={n.isNew ? onMarkRead : undefined}
-      className={`flex items-start gap-3.5 p-3.5 border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors cursor-pointer ${
-        n.isNew ? 'bg-blue-50/40' : 'bg-white opacity-70'
-      }`}
+      className="flex items-center gap-3 px-4 py-3 cursor-pointer active:opacity-80 transition-opacity"
     >
-      <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 flex-shrink-0">
-        {n.type === 'upvote' ? (
-          <span className="font-extrabold text-[15px]">👍</span>
-        ) : n.type === 'reply' ? (
-          <span className="font-extrabold text-[15px]">💬</span>
-        ) : n.type === 'new-report' ? (
-          <span className="font-extrabold text-[15px]">⚠️</span>
-        ) : (
-          <span className="font-extrabold text-[15px]">🔔</span>
-        )}
-      </div>
-      
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5 mb-1">
-          {n.isNew && (
-            <span className="text-[8px] font-black bg-blue-600 text-white px-1.5 py-0.5 rounded tracking-wider uppercase">
-              NEW
-            </span>
-          )}
-          <span className="text-[10px] text-gray-400 font-semibold">{n.timeAgo}</span>
+      {/* Yellow card */}
+      <div
+        className="flex-1 flex items-center gap-3 rounded-2xl px-3 py-3"
+        style={{ background: '#FFF9C4', opacity: n.isNew ? 1 : 0.65 }}
+      >
+        {/* Thumbnail */}
+        <LandscapeThumb className="w-14 h-14 rounded-xl flex-shrink-0" />
+
+        {/* Text */}
+        <div className="flex-1 min-w-0">
+          <p className={`text-[13px] leading-snug ${n.isNew ? 'font-bold text-gray-900' : 'font-semibold text-gray-600'}`}>
+            {n.title}
+          </p>
+          <p className="text-[11.5px] text-gray-500 mt-0.5 truncate">{n.detail}</p>
+          <p className="text-[10px] text-gray-400 mt-0.5 font-semibold">{n.timeAgo}</p>
         </div>
-        <p className={`text-[13px] text-gray-900 leading-snug ${n.isNew ? 'font-bold' : 'font-medium'}`}>
-          {n.title}
-        </p>
-        {n.subtitle && <p className="text-[11.5px] text-gray-500 font-bold mt-0.5">{n.subtitle}</p>}
-        <p className="text-[12px] text-gray-500 mt-0.5">{n.detail}</p>
       </div>
 
+      {/* Menu */}
       <button
         onClick={(e) => {
-          e.stopPropagation(); // prevent mark read when deleting
+          e.stopPropagation();
           onDelete();
         }}
-        className="text-gray-300 hover:text-red-500 mt-1 p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+        className="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg transition-colors cursor-pointer flex-shrink-0"
       >
-        <Trash2 size={14} />
+        <MoreHorizontal size={16} />
       </button>
     </div>
   );
 }
 
-export function NotificationsPanel({ notifications, onMarkAllRead, onDeleteNotif }: Props) {
+export function NotificationsPanel({
+  notifications,
+  onMarkAllRead,
+  onDeleteNotif,
+  onBack,
+}: Props) {
   const handleMarkRead = (id: string) => {
-    fetch(`/api/notifications/${id}/read`, { method: 'PUT' })
-      .then((res) => {
-        if (res.ok) {
-          // Trigger a silent reload or let the parent poll handle it
-        }
-      })
-      .catch((err) => console.error(err));
+    fetch(`/api/notifications/${id}/read`, { method: 'PUT' }).catch((err) =>
+      console.error(err)
+    );
   };
 
   const hasUnread = notifications.some((n) => n.isNew);
 
   return (
-    <div className="absolute inset-0 bg-white z-40 flex flex-col">
-      <div className="px-4 pt-5 pb-3 border-b border-gray-100 flex items-center justify-between">
-        <h2 className="text-[20px] font-extrabold text-gray-900">Notifications</h2>
-        {hasUnread && (
-          <button
-            onClick={onMarkAllRead}
-            className="text-[12px] font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1"
-          >
-            <CheckCircle size={14} />
-            Mark all read
-          </button>
-        )}
-      </div>
+    <div
+      className="absolute inset-0 z-40 flex flex-col"
+      style={{ background: '#F5F0C0' }}
+    >
+      {/* Header */}
+      <PanelHeader title="Notifications" onBack={onBack} />
 
-      <div className="flex-1 overflow-y-auto min-h-0 divide-y divide-gray-50">
+      {/* List */}
+      <div className="flex-1 overflow-y-auto min-h-0 pb-32">
         {notifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center px-6">
-            <div className="w-14 h-14 bg-gray-50 rounded-full flex items-center justify-center text-gray-300 mb-3 border border-gray-100">
-              <BellOff size={22} />
+            <div className="w-14 h-14 rounded-full flex items-center justify-center mb-3"
+              style={{ background: '#FFF9C4' }}>
+              <BellOff size={22} className="text-gray-400" />
             </div>
-            <p className="font-bold text-[14px] text-gray-900 mb-0.5">All quiet for now</p>
-            <p className="text-[12px] text-gray-400 max-w-[200px]">
-              You will receive alerts here when hazards are reported nearby.
+            <p className="font-bold text-[14px] text-gray-800 mb-0.5">All quiet for now</p>
+            <p className="text-[12px] text-gray-500 max-w-[200px]">
+              You'll receive alerts here when hazards are reported nearby.
             </p>
           </div>
         ) : (
@@ -106,7 +102,18 @@ export function NotificationsPanel({ notifications, onMarkAllRead, onDeleteNotif
           ))
         )}
       </div>
+
+      {/* Mark all as read — bottom */}
+      {hasUnread && (
+        <div className="flex-shrink-0 flex items-center justify-center pb-4">
+          <button
+            onClick={onMarkAllRead}
+            className="text-[12px] font-semibold text-gray-500 underline underline-offset-2 hover:text-gray-700 transition-colors cursor-pointer"
+          >
+            Mark all as read
+          </button>
+        </div>
+      )}
     </div>
   );
 }
-

@@ -5,7 +5,10 @@ import { motion, AnimatePresence } from 'motion/react';
 import type { MapPin, HazardLevel, HazardFilter, SavedRoute } from '../types';
 import { HAZARD_COLORS, reportSvgPaths } from '../types';
 
-const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "AIzaSyB2WFoRbVp3HPXHotn27e600KWnHJZZQ80";
+const GOOGLE_MAPS_API_KEY = "AIzaSyB2WFoRbVp3HPXHotn27e600KWnHJZZQ80";
+
+
+
 
 const FILTERS: { key: HazardFilter; label: string }[] = [
   { key: 'all', label: 'All' },
@@ -189,41 +192,46 @@ function MapInner({ pins, activeRoute, onOpenDetail, onClearActiveRoute }: Props
 
     const visible = filter === 'all' ? pins : pins.filter(p => p.hazardLevel === filter);
 
-    visible.forEach(pin => {
-      const hazardLvl = pin.hazardLevel || 'needs-attention';
-      const hazardColor = HAZARD_COLORS[hazardLvl as HazardLevel] || HAZARD_COLORS['needs-attention'];
-      const { bg } = hazardColor;
-      const path = reportSvgPaths[pin.type] ?? reportSvgPaths['other'];
-      
+    visible.forEach((pin, idx) => {
+      const { bg } = HAZARD_COLORS[pin.hazardLevel];
+
       // Determine if pin is near the active route path
       const near = activeRoute ? isNearRoute(pin, activeRoute.routePath) : false;
-      const strokeColor = near ? '#ff0000' : 'white';
-      const strokeWidth = near ? '3.5' : '2';
-      const glowCircle = near ? `<circle cx="16" cy="14" r="11" fill="none" stroke="#ff0000" stroke-width="2" stroke-dasharray="2,2"/>` : '';
 
-      // Build SVG data-URL icon
+      // Unique clip-path ID per pin
+      const clipId = `lc${idx}${(pin.id || '').replace(/[^a-z0-9]/gi, '').slice(-6)}`;
+
+      // Circular landscape pin SVG
       const svgStr = [
-        `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="44" viewBox="0 0 32 44">`,
-        glowCircle,
-        `<path d="M16 2C9.373 2 4 7.373 4 14C4 23 16 40 16 40C16 40 28 23 28 14C28 7.373 22.627 2 16 2Z"`,
-        ` fill="${bg}" stroke="${strokeColor}" stroke-width="${strokeWidth}"/>`,
-        `<circle cx="16" cy="14" r="7" fill="white" fill-opacity="0.25"/>`,
-        `<svg x="10" y="8" width="12" height="12" viewBox="0 0 24 24" fill="none"`,
-        ` stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">`,
-        `<path d="${path}"/></svg>`,
+        `<svg xmlns="http://www.w3.org/2000/svg" width="54" height="54" viewBox="0 0 54 54">`,
+        `<defs><clipPath id="${clipId}"><circle cx="27" cy="27" r="20"/></clipPath></defs>`,
+        // Outer ring
+        `<circle cx="27" cy="27" r="26" fill="${bg}" stroke="white" stroke-width="3"/>`,
+        // Sky background (clipped)
+        `<rect x="7" y="7" width="40" height="22" fill="#87CEEB" clip-path="url(#${clipId})"/>`,
+        // Back hill
+        `<ellipse cx="15" cy="40" rx="19" ry="13" fill="#7aab52" clip-path="url(#${clipId})"/>`,
+        // Middle hill
+        `<ellipse cx="40" cy="42" rx="17" ry="12" fill="#6a9e44" clip-path="url(#${clipId})"/>`,
+        // Ground
+        `<rect x="7" y="35" width="40" height="15" fill="#5c9130" clip-path="url(#${clipId})"/>`,
+        // Front bump
+        `<ellipse cx="24" cy="36" rx="13" ry="8" fill="#5c9130" clip-path="url(#${clipId})"/>`,
+        // Near-route dashed highlight ring
+        near ? `<circle cx="27" cy="27" r="26" fill="none" stroke="#ef4444" stroke-width="3.5" stroke-dasharray="5,3"/>` : '',
         `</svg>`,
       ].join('');
 
       const icon: google.maps.Icon = {
         url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svgStr),
-        scaledSize: new google.maps.Size(32, 44),
-        anchor: new google.maps.Point(16, 44),
+        scaledSize: new google.maps.Size(54, 54),
+        anchor: new google.maps.Point(27, 27),  // Center anchor for circles
       };
 
-      const marker = new google.maps.Marker({ 
-        map, 
-        position: { lat: pin.lat, lng: pin.lng }, 
-        icon, 
+      const marker = new google.maps.Marker({
+        map,
+        position: { lat: pin.lat, lng: pin.lng },
+        icon,
         title: pin.title,
         zIndex: near ? 1000 : 100
       });
@@ -256,30 +264,44 @@ function MapInner({ pins, activeRoute, onOpenDetail, onClearActiveRoute }: Props
       };
       
       marker.addListener('click', () => {
-        if (activePinIdRef.current === pin.id) {
-          iw.close();
-          activePinIdRef.current = null;
-          return;
-        }
-        activePinIdRef.current = pin.id;
+        // Mini landscape SVG for the thumbnail inside the popup
+        const thumbSvg = [
+          `<svg xmlns='http://www.w3.org/2000/svg' width='76' height='86' viewBox='0 0 76 86'>`,
+          `<rect width='76' height='86' fill='#87CEEB'/>`,
+          `<ellipse cx='18' cy='74' rx='30' ry='20' fill='#7aab52'/>`,
+          `<ellipse cx='60' cy='78' rx='26' ry='18' fill='#6a9e44'/>`,
+          `<rect x='0' y='58' width='76' height='28' fill='#5c9130'/>`,
+          `<ellipse cx='32' cy='60' rx='20' ry='13' fill='#5c9130'/>`,
+          `</svg>`,
+        ].join('');
+
+        const descText = (pin.description || '').slice(0, 60) + ((pin.description || '').length > 60 ? '…' : '');
+
         const div = document.createElement('div');
-        div.style.cssText = 'width:240px;display:flex;border-radius:10px;overflow:hidden;font-family:system-ui,sans-serif;';
-        
-        const categoryName = CATEGORIES[pin.type] || pin.title;
-        const photoSrc = (pin.photos && pin.photos.length > 0) ? pin.photos[0] : pin.photo;
-        const imgHtml = photoSrc 
-          ? `<img src="${photoSrc}" style="width:100%;height:100%;object-fit:cover;" />` 
-          : `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${bg}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="${path}"/></svg>`;
-        
+        div.style.cssText = `
+          width:252px;
+          background:white;
+          border-radius:14px;
+          border:2.5px solid ${bg};
+          overflow:hidden;
+          font-family:system-ui,-apple-system,sans-serif;
+          box-shadow:0 6px 24px rgba(0,0,0,0.18);
+        `;
         div.innerHTML = `
-          <div style="width:72px;flex-shrink:0;background:${bg}22;display:flex;align-items:center;justify-content:center;overflow:hidden;">
-            ${imgHtml}
-          </div>
-          <div style="flex:1;padding:6px 10px;display:flex;flex-direction:column;justify-content:center;">
-            <div style="font-size:12px;font-weight:800;color:#111;line-height:1.2;">${categoryName}</div>
-            <div style="font-size:10px;color:#6b7280;line-height:1.2;margin-top:2px;">${pin.description ? pin.description.slice(0, 50) + (pin.description.length > 50 ? '…' : '') : ''}</div>
-            <div style="font-size:9px;color:#9ca3af;margin-top:2px;">by ${pin.reportedBy} · ${pin.timeAgo}</div>
-            <button id="vm-${pin.id}" style="margin-top:2px;align-self:flex-end;font-size:11px;font-weight:700;color:#1d4ed8;border:none;background:none;cursor:pointer;padding:0;">View more →</button>
+          <div style="display:flex;align-items:stretch;min-height:86px;">
+            <div style="width:76px;flex-shrink:0;overflow:hidden;">
+              ${thumbSvg}
+            </div>
+            <div style="flex:1;padding:10px 12px;display:flex;flex-direction:column;gap:1px;">
+              <div style="font-size:13px;font-weight:800;color:#111;line-height:1.3;margin-bottom:2px;">${pin.title}</div>
+              <div style="font-size:10.5px;color:#6b7280;line-height:1.3;">${pin.address || ''}</div>
+              <div style="font-size:10px;color:#9ca3af;line-height:1.4;margin-top:1px;">${descText}</div>
+              <div style="font-size:10px;color:#9ca3af;margin-top:3px;">${pin.timeAgo}</div>
+              <div style="font-size:10px;color:#9ca3af;">${pin.reportedBy ? 'by ' + pin.reportedBy : ''}</div>
+              <button id="vm-${pin.id}" style="margin-top:5px;align-self:flex-end;font-size:11px;font-weight:700;color:#2563eb;border:none;background:none;cursor:pointer;padding:0;">
+                view more →
+              </button>
+            </div>
           </div>`;
 
         iw.setContent(div);
@@ -354,7 +376,19 @@ function MapInner({ pins, activeRoute, onOpenDetail, onClearActiveRoute }: Props
       )}
 
       <div className="absolute top-3 left-0 right-0 z-[1000] flex flex-col items-center gap-2 pointer-events-none">
-        <div className="pointer-events-auto">
+        <div className="pointer-events-auto flex items-center gap-2">
+          {/* Map label pill */}
+          <div
+            className="flex items-center gap-1.5 px-4 py-2 rounded-full text-[13px] font-bold text-white shadow-lg"
+            style={{ background: '#47B3E8' }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/>
+              <line x1="8" y1="2" x2="8" y2="18"/>
+              <line x1="16" y1="6" x2="16" y2="22"/>
+            </svg>
+            Map
+          </div>
           <FilterDropdown filter={filter} onChange={setFilter} />
         </div>
         {activeRoute && onClearActiveRoute && (

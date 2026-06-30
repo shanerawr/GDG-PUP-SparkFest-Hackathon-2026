@@ -1,66 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
+import { setOptions, importLibrary } from '@googlemaps/js-api-loader';
 import {
-  X, Camera, Droplets, Car, Zap, Flame, HardHat, AlertCircle,
-  MapPin, Pencil, RotateCcw, CheckCircle, ImageIcon, Search,
+  X, Camera, Droplets, Car, Zap, Flame, HardHat, AlertCircle, ImageIcon, CheckCircle,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { setOptions, importLibrary } from '@googlemaps/js-api-loader';
-import { CameraView } from './CameraView';
-import { LocationPickerModal } from './LocationPickerModal';
-import type { UserReport } from '../types';
+import { PanelHeader } from './PanelHeader';
 
-const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyB2WFoRbVp3HPXHotn27e600KWnHJZZQ80';
-
-function PlacesInput({
-  placeholder,
-  value,
-  onChange,
-  onPlaceSelected,
-  placesReady,
-  className,
-}: {
-  placeholder: string;
-  value: string;
-  onChange: (v: string) => void;
-  onPlaceSelected: (place: google.maps.places.PlaceResult) => void;
-  placesReady: boolean;
-  className?: string;
-}) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
-
-  useEffect(() => {
-    if (!placesReady || !inputRef.current || autocompleteRef.current) return;
-
-    const ac = new google.maps.places.Autocomplete(inputRef.current, {
-      componentRestrictions: { country: 'ph' },
-      fields: ['formatted_address', 'geometry', 'name'],
-    });
-    ac.addListener('place_changed', () => {
-      const place = ac.getPlace();
-      if (place?.formatted_address) {
-        onChange(place.formatted_address);
-        onPlaceSelected(place);
-      } else if (place?.name) {
-        onChange(place.name);
-      }
-    });
-    autocompleteRef.current = ac;
-  }, [placesReady]);
-
-  return (
-    <div className="relative">
-      <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-      <input
-        ref={inputRef}
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        placeholder={placeholder}
-        className={className || "w-full border border-gray-200 rounded-lg pl-9 pr-3 py-2.5 text-[12px] text-black bg-gray-50 placeholder-gray-400 focus:outline-none focus:border-gray-400 transition-colors"}
-      />
-    </div>
-  );
-}
+const GOOGLE_MAPS_API_KEY = 'AIzaSyB2WFoRbVp3HPXHotn27e600KWnHJZZQ80';
 
 interface Props {
   onClose: () => void;
@@ -78,145 +24,261 @@ const CATEGORIES = [
   { key: 'other', label: 'Other', Icon: AlertCircle },
 ];
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="text-[14px] font-extrabold text-gray-900 mb-2">{children}</p>
-  );
-}
+/* ── Fixed-center-pin location map ── */
+function PinLocationMap({
+  onLocationChange,
+}: {
+  onLocationChange: (lat: number, lng: number, address: string) => void;
+}) {
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<google.maps.Map | null>(null);
+  const geocoderRef = useRef<google.maps.Geocoder | null>(null);
+  const [loaded, setLoaded] = useState(false);
 
-function SmallMapPreview({ showBluePin = false }: { showBluePin?: boolean }) {
+  const reverseGeocode = (lat: number, lng: number) => {
+    if (!geocoderRef.current) return;
+    geocoderRef.current.geocode({ location: { lat, lng } }, (results, status) => {
+      if (status === 'OK' && results && results[0]) {
+        onLocationChange(lat, lng, results[0].formatted_address);
+      } else {
+        onLocationChange(lat, lng, `${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+      }
+    });
+  };
+
+  const handleLocate = () => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    navigator.geolocation?.getCurrentPosition(
+      (pos) => {
+        const { latitude: lat, longitude: lng } = pos.coords;
+        map.panTo({ lat, lng });
+        map.setZoom(16);
+        reverseGeocode(lat, lng);
+      },
+      () => {
+        // fallback: keep current center
+        const center = map.getCenter();
+        if (center) reverseGeocode(center.lat(), center.lng());
+      }
+    );
+  };
+
+  useEffect(() => {
+    if (!mapRef.current) return;
+    let cancelled = false;
+
+    setOptions({ apiKey: GOOGLE_MAPS_API_KEY, version: 'weekly' });
+    Promise.all([importLibrary('maps'), importLibrary('geocoding')])
+      .then(() => {
+        if (cancelled || !mapRef.current) return;
+
+        const DEFAULT = { lat: 14.5995, lng: 120.9842 };
+
+        const map = new google.maps.Map(mapRef.current, {
+          center: DEFAULT,
+          zoom: 14,
+          disableDefaultUI: true,
+          gestureHandling: 'greedy',
+          clickableIcons: false,
+        });
+
+        geocoderRef.current = new google.maps.Geocoder();
+        mapInstanceRef.current = map;
+
+        // Fire initial geocode
+        reverseGeocode(DEFAULT.lat, DEFAULT.lng);
+
+        // Every time the map stops moving, read its center
+        map.addListener('idle', () => {
+          const center = map.getCenter();
+          if (center) reverseGeocode(center.lat(), center.lng());
+        });
+
+        if (!cancelled) setLoaded(true);
+      })
+      .catch(console.error);
+
+    return () => { cancelled = true; };
+  }, []);
+
   return (
-    <div className="w-full h-full relative overflow-hidden" style={{ background: '#f0ebe0' }}>
-      <svg width="100%" height="100%" viewBox="0 0 120 96" preserveAspectRatio="xMidYMid slice">
-        <rect width="120" height="96" fill="#f0ebe0" />
-        {/* Bay */}
-        <rect x="0" y="0" width="16" height="96" fill="#b3d9f5" opacity="0.8" />
-        {/* Horizontal roads */}
-        <rect x="0" y="36" width="120" height="4" fill="white" opacity="0.85" />
-        <rect x="0" y="66" width="120" height="3" fill="white" opacity="0.75" />
-        {/* Vertical roads */}
-        <rect x="36" y="0" width="3" height="96" fill="white" opacity="0.85" />
-        <rect x="72" y="0" width="3" height="96" fill="white" opacity="0.75" />
-        {/* Blocks */}
-        <rect x="18" y="4" width="15" height="29" fill="#e3dcd2" />
-        <rect x="39" y="4" width="30" height="29" fill="#e3dcd2" />
-        <rect x="75" y="4" width="22" height="29" fill="#e3dcd2" />
-        <rect x="18" y="42" width="15" height="21" fill="#e3dcd2" />
-        <rect x="39" y="42" width="30" height="21" fill="#e3dcd2" />
-        <rect x="75" y="42" width="22" height="21" fill="#e3dcd2" />
-        <rect x="18" y="70" width="15" height="24" fill="#e3dcd2" />
-        <rect x="39" y="70" width="30" height="24" fill="#e3dcd2" />
-        <rect x="75" y="70" width="22" height="24" fill="#e3dcd2" />
-        {/* Pin */}
-        {showBluePin ? (
-          <>
-            <path d="M76 30 C72 30 69 33 69 37 C69 43 76 51 76 51 C76 51 83 43 83 37 C83 33 80 30 76 30Z" fill="#1d4ed8" />
-            <circle cx="76" cy="37" r="3.5" fill="white" />
-          </>
-        ) : (
-          <>
-            <path d="M58 18 C54 18 51 21 51 25 C51 31 58 39 58 39 C58 39 65 31 65 25 C65 21 62 18 58 18Z" fill="#dc2626" />
-            <circle cx="58" cy="25" r="3.5" fill="white" />
-          </>
-        )}
-      </svg>
+    <div className="relative w-full rounded-xl overflow-hidden" style={{ height: 180 }}>
+      {/* Map */}
+      <div ref={mapRef} className="w-full h-full" />
+
+      {/* Loading state */}
+      {!loaded && (
+        <div className="absolute inset-0 flex items-center justify-center rounded-xl" style={{ background: '#C5D8E0' }}>
+          <div className="w-7 h-7 border-[3px] border-blue-500 border-t-transparent rounded-full animate-spin" />
+        </div>
+      )}
+
+      {/* Fixed center pin — tip anchored exactly at map center */}
+      <div
+        className="absolute pointer-events-none"
+        style={{
+          left: '50%',
+          top: '50%',
+          transform: 'translate(-50%, -100%)',
+          filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.35))',
+        }}
+      >
+        <svg width="36" height="50" viewBox="0 0 36 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M18 2C10.27 2 4 8.27 4 16C4 26.5 18 48 18 48C18 48 32 26.5 32 16C32 8.27 25.73 2 18 2Z" fill="#FBBF24" stroke="white" strokeWidth="2.5"/>
+          <circle cx="18" cy="16" r="6" fill="white"/>
+        </svg>
+      </div>
+
+      {/* Locate button — bottom right */}
+      <button
+        onClick={handleLocate}
+        className="absolute bottom-2.5 right-2.5 w-9 h-9 bg-white rounded-full shadow-lg flex items-center justify-center text-gray-600 hover:bg-gray-50 active:scale-95 transition-transform cursor-pointer pointer-events-auto"
+      >
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+          <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z" strokeOpacity="0.3"/>
+        </svg>
+      </button>
+
+      {/* Drag hint label */}
+      <div className="absolute top-2.5 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/90 shadow pointer-events-none whitespace-nowrap">
+        <span className="text-[11px] text-gray-500 font-medium">Drag map to pick location</span>
+      </div>
     </div>
   );
 }
 
-
-
-export function AddReportModal({ onClose, onSubmit, initialData }: Props) {
-  const [category, setCategory] = useState(initialData?.typeKey || 'fallen-pole');
-  const [address, setAddress] = useState(initialData?.location || '');
-  const [description, setDescription] = useState(initialData?.moreDetails || '');
-  const [submitted, setSubmitted] = useState(false);
-  const [photos, setPhotos] = useState<string[]>(initialData?.photos || (initialData?.photo ? [initialData.photo] : []));
-  const [isCameraOpen, setIsCameraOpen] = useState(false);
-  const [isMapPickerOpen, setIsMapPickerOpen] = useState(false);
-  const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
-  const [isLocating, setIsLocating] = useState(true);
-  const [placesReady, setPlacesReady] = useState(false);
-  const [radius, setRadius] = useState<number>(initialData?.radius || 50);
+/* ── Affected Area map — interactive drag/zoom + resizable radius circle ── */
+function AffectedAreaMap({ lat, lng }: { lat: number; lng: number }) {
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<google.maps.Map | null>(null);
+  const circleRef = useRef<google.maps.Circle | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [radius, setRadius] = useState(200); // metres
 
   useEffect(() => {
+    if (!mapRef.current) return;
     let cancelled = false;
+
     setOptions({ apiKey: GOOGLE_MAPS_API_KEY, version: 'weekly' });
-    Promise.all([importLibrary('maps'), importLibrary('places'), importLibrary('geocoding')]).then(() => {
-      if (!cancelled) setPlacesReady(true);
-    });
+    importLibrary('maps').then(() => {
+      if (cancelled || !mapRef.current) return;
+
+      const map = new google.maps.Map(mapRef.current, {
+        center: { lat, lng },
+        zoom: 15,
+        disableDefaultUI: true,
+        gestureHandling: 'greedy',   // ← drag + pinch-zoom enabled
+        clickableIcons: false,
+      });
+
+      const circle = new google.maps.Circle({
+        map,
+        center: { lat, lng },
+        radius: 200,
+        fillColor: '#2563EB',
+        fillOpacity: 0.18,
+        strokeColor: '#2563EB',
+        strokeOpacity: 0.7,
+        strokeWeight: 2.5,
+      });
+
+      mapInstanceRef.current = map;
+      circleRef.current = circle;
+      if (!cancelled) setLoaded(true);
+    }).catch(console.error);
+
     return () => { cancelled = true; };
   }, []);
 
-  const detectLocation = () => {
-    if ('geolocation' in navigator) {
-      setIsLocating(true);
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const lat = position.coords.latitude;
-          const lng = position.coords.longitude;
-          setUserLocation({ lat, lng });
-          
-          if (window.google?.maps?.Geocoder) {
-            const geocoder = new google.maps.Geocoder();
-            geocoder.geocode({ location: { lat, lng } }, (results, status) => {
-              if (status === 'OK' && results && results[0]) {
-                setAddress(results[0].formatted_address);
-              } else {
-                setAddress(`${lat.toFixed(5)}, ${lng.toFixed(5)}`);
-              }
-              setIsLocating(false);
-            });
-          } else {
-            setAddress(`${lat.toFixed(5)}, ${lng.toFixed(5)}`);
-            setIsLocating(false);
-          }
-        },
-        (error) => {
-          console.error("Error getting location:", error);
-          setIsLocating(false);
-        },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-      );
-    }
-  };
-
+  // Sync center when pin location changes
   useEffect(() => {
-    // If we are editing, we don't automatically override location with current location
-    if (initialData) {
-      setIsLocating(false);
-      return;
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.panTo({ lat, lng });
+      circleRef.current?.setCenter({ lat, lng });
     }
-    detectLocation();
-  }, [initialData]);
+  }, [lat, lng]);
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPhotos(prev => [...prev, reader.result as string]);
-      };
-      reader.readAsDataURL(file);
-    }
+  // Sync circle radius when slider changes
+  useEffect(() => {
+    circleRef.current?.setRadius(radius);
+  }, [radius]);
+
+  const zoomIn  = () => mapInstanceRef.current?.setZoom((mapInstanceRef.current.getZoom() ?? 15) + 1);
+  const zoomOut = () => mapInstanceRef.current?.setZoom((mapInstanceRef.current.getZoom() ?? 15) - 1);
+
+  const radiusLabel = radius >= 1000 ? `${(radius / 1000).toFixed(1)} km` : `${radius} m`;
+
+  return (
+    <div className="w-full rounded-xl overflow-hidden" style={{ height: 180 }}>
+      {/* Map */}
+      <div className="relative w-full" style={{ height: 140 }}>
+        <div ref={mapRef} className="w-full h-full rounded-t-xl" />
+        {!loaded && (
+          <div className="absolute inset-0 flex items-center justify-center rounded-t-xl" style={{ background: '#C5D8E0' }}>
+            <div className="w-6 h-6 border-[3px] border-blue-500 border-t-transparent rounded-full animate-spin" />
+          </div>
+        )}
+
+        {/* Zoom buttons — bottom right */}
+        <div className="absolute bottom-2.5 right-2.5 flex flex-col gap-1">
+          <button
+            onClick={zoomIn}
+            className="w-8 h-8 bg-white rounded-full shadow flex items-center justify-center text-gray-700 font-bold text-lg active:scale-95 transition-transform cursor-pointer"
+          >+</button>
+          <button
+            onClick={zoomOut}
+            className="w-8 h-8 bg-white rounded-full shadow flex items-center justify-center text-gray-700 font-bold text-lg active:scale-95 transition-transform cursor-pointer"
+          >−</button>
+        </div>
+
+        {/* Radius badge */}
+        <div className="absolute top-2 left-2 px-2 py-1 rounded-full bg-blue-600 text-white text-[10px] font-bold shadow pointer-events-none">
+          ⬤ {radiusLabel} radius
+        </div>
+      </div>
+
+      {/* Radius slider */}
+      <div
+        className="flex items-center gap-2.5 px-3 rounded-b-xl"
+        style={{ height: 40, background: '#C8DDE6' }}
+      >
+        <span className="text-[10px] font-bold text-gray-600 flex-shrink-0">Radius</span>
+        <input
+          type="range"
+          min={50}
+          max={2000}
+          step={50}
+          value={radius}
+          onChange={e => setRadius(Number(e.target.value))}
+          className="flex-1 accent-blue-600 cursor-pointer"
+        />
+        <span className="text-[10px] font-bold text-blue-700 w-14 text-right flex-shrink-0">{radiusLabel}</span>
+      </div>
+    </div>
+  );
+}
+
+/* ── Main modal ── */
+export function AddReportModal({ onClose, onSubmit }: Props) {
+  const [category, setCategory] = useState('fallen-pole');
+  const [address, setAddress] = useState('');
+  const [description, setDescription] = useState('');
+  const [submitted, setSubmitted] = useState(false);
+  const [pinLat, setPinLat] = useState(14.5995);
+  const [pinLng, setPinLng] = useState(120.9842);
+
+  const handleLocationChange = (lat: number, lng: number, addr: string) => {
+    setPinLat(lat);
+    setPinLng(lng);
+    setAddress(addr);
   };
 
   const handleSubmit = () => {
     setSubmitted(true);
-    // Use actual user location if available, otherwise simulate coordinates (or leave undefined if editing)
-    const lat = userLocation ? userLocation.lat : (initialData ? undefined : 14.5995 + (Math.random() - 0.5) * 0.05);
-    const lng = userLocation ? userLocation.lng : (initialData ? undefined : 120.9842 + (Math.random() - 0.5) * 0.05);
-    
     setTimeout(() => {
-      onSubmit({
-        type: category,
-        address: address || 'Manila',
-        description,
-        lat,
-        lng,
-        photos,
-        radius
-      });
+      onSubmit({ type: category, address: address || 'Manila', description, lat: pinLat, lng: pinLng });
     }, 1800);
   };
 
@@ -226,11 +288,11 @@ export function AddReportModal({ onClose, onSubmit, initialData }: Props) {
       animate={{ y: 0 }}
       exit={{ y: '100%' }}
       transition={{ type: 'spring', damping: 28, stiffness: 350 }}
-      className="absolute inset-0 bg-white z-50 flex flex-col"
+      className="absolute inset-0 z-50 flex flex-col"
+      style={{ background: '#B8DCE8' }}
     >
       <AnimatePresence mode="wait">
         {submitted ? (
-          /* ── Success screen ── */
           <motion.div
             key="success"
             initial={{ opacity: 0, scale: 0.92 }}
@@ -246,77 +308,54 @@ export function AddReportModal({ onClose, onSubmit, initialData }: Props) {
               <CheckCircle size={40} className="text-green-600" />
             </motion.div>
             <h2 className="text-[22px] font-bold text-gray-900 mb-2">Report Submitted!</h2>
-            <p className="text-[14px] text-gray-500">
+            <p className="text-[14px] text-gray-600">
               Salamat! Your report has been sent to the relevant authorities.
             </p>
           </motion.div>
         ) : (
-          /* ── Form ── */
           <motion.div key="form" className="flex-1 flex flex-col overflow-hidden">
-        <div className="p-5 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white z-10">
-          <h2 className="text-[20px] font-extrabold text-gray-900 tracking-tight">
-            {initialData ? 'Edit Report' : 'Submit a Report'}
-          </h2>
-          <button 
-            onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 active:scale-95 transition-transform"
-          >
-            <X size={20} />
-          </button>
-        </div>
 
-            {/* Scrollable form body */}
-            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5">
+            {/* Back header */}
+            <PanelHeader title="" onBack={onClose} bg="#B8DCE8" />
 
-              {/* ── Pin Location ── */}
+            {/* Title row + close */}
+            <div className="relative flex items-center justify-center px-4 pb-3 flex-shrink-0">
+              <h1 className="text-[22px] font-extrabold text-gray-900">New Report</h1>
+              <button
+                onClick={onClose}
+                className="absolute right-4 w-8 h-8 rounded-full bg-white/60 flex items-center justify-center text-gray-600 active:scale-95 transition-transform cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Scrollable body */}
+            <div className="flex-1 overflow-y-auto px-4 pb-36 space-y-5">
+
+              {/* Title */}
               <div>
-                <SectionLabel>Pin Location</SectionLabel>
-                <div className="flex gap-3">
-                  <div 
-                    onClick={() => setIsMapPickerOpen(true)}
-                    className="w-[90px] h-[72px] rounded-xl overflow-hidden flex-shrink-0 border border-gray-200 relative group cursor-pointer transition-opacity hover:opacity-80"
-                  >
-                    <SmallMapPreview />
-                    <div className="absolute inset-0 bg-black/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <span className="text-[10px] font-bold text-white bg-black/60 px-2 py-1 rounded">Edit Pin</span>
-                    </div>
-                  </div>
-                  {/* Controls */}
-                  <div className="flex-1 flex flex-col gap-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 text-[12px] text-gray-500">
-                        <MapPin size={12} className={isLocating ? "text-blue-500 animate-pulse" : "text-gray-400"} />
-                        <span>
-                          {isLocating ? "Detecting location..." : userLocation ? "Using current location" : "Could not detect location"}
-                        </span>
-                      </div>
-                      <button 
-                        onClick={detectLocation}
-                        disabled={isLocating}
-                        className="text-[11px] font-bold text-blue-600 hover:text-blue-700 disabled:opacity-50"
-                      >
-                        Use current location
-                      </button>
-                    </div>
-                    
-                    <PlacesInput
-                      placeholder="Search location..."
-                      value={address}
-                      onChange={setAddress}
-                      onPlaceSelected={(place) => {
-                        if (place.geometry?.location) {
-                          setUserLocation({ lat: place.geometry.location.lat(), lng: place.geometry.location.lng() });
-                        }
-                      }}
-                      placesReady={placesReady}
-                    />
-                  </div>
-                </div>
+                <p className="text-[14px] font-extrabold text-gray-900 mb-1.5">Title</p>
+                <input
+                  placeholder=""
+                  className="w-full bg-white rounded-xl px-3.5 py-3 text-[13px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                />
               </div>
 
-              {/* ── Incident Category ── */}
+              {/* Pin Location — real Google Map */}
               <div>
-                <SectionLabel>Incident Category</SectionLabel>
+                <p className="text-[14px] font-extrabold text-gray-900 mb-1.5">Pin Location</p>
+                <PinLocationMap onLocationChange={handleLocationChange} />
+                {/* Show resolved address */}
+                {address ? (
+                  <p className="mt-1.5 text-[11px] text-gray-600 font-medium px-1 truncate">
+                    📍 {address}
+                  </p>
+                ) : null}
+              </div>
+
+              {/* Category */}
+              <div>
+                <p className="text-[14px] font-extrabold text-gray-900 mb-1.5">Incident Category</p>
                 <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
                   {CATEGORIES.map(({ key, label, Icon }) => {
                     const active = category === key;
@@ -324,14 +363,14 @@ export function AddReportModal({ onClose, onSubmit, initialData }: Props) {
                       <button
                         key={key}
                         onClick={() => setCategory(key)}
-                        className="flex-shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[13px] font-medium border transition-colors"
+                        className="flex-shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[12px] font-semibold border transition-colors cursor-pointer"
                         style={
                           active
-                            ? { background: '#eff6ff', borderColor: '#93c5fd', color: '#1d4ed8' }
-                            : { background: 'white', borderColor: '#e5e7eb', color: '#374151' }
+                            ? { background: '#2563EB', borderColor: '#2563EB', color: 'white' }
+                            : { background: 'white', borderColor: '#d1d5db', color: '#374151' }
                         }
                       >
-                        <Icon size={13} />
+                        <Icon size={12} />
                         {label}
                       </button>
                     );
@@ -339,67 +378,52 @@ export function AddReportModal({ onClose, onSubmit, initialData }: Props) {
                 </div>
               </div>
 
-              {/* ── Photo Upload ── */}
+              {/* Upload Photo/s */}
               <div>
-                <SectionLabel>Photo Upload</SectionLabel>
-                <div className="flex gap-2 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
-                  {photos.map((p, idx) => (
-                    <div key={idx} className="relative inline-block border border-gray-200 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
-                      <img src={p} alt="Uploaded" className="h-[120px] w-auto max-w-full object-contain" />
-                      <button 
-                        onClick={() => setPhotos(prev => prev.filter((_, i) => i !== idx))}
-                        className="absolute top-1 right-1 w-6 h-6 bg-black/50 shadow-sm rounded-full flex items-center justify-center text-white hover:bg-black/70 transition-colors"
-                      >
-                        <X size={12} />
-                      </button>
-                    </div>
-                  ))}
-                  
-                  {/* Upload Buttons */}
-                  <div className="flex gap-2 flex-shrink-0">
-                    <button 
-                      type="button" 
-                      onClick={() => setIsCameraOpen(true)}
-                      className="flex flex-col items-center justify-center gap-1.5 px-3 py-2 h-[120px] rounded-xl bg-gray-50 border border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors"
-                    >
-                      <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-blue-600 shadow-sm border border-gray-100">
-                        <Camera size={18} />
-                      </div>
-                      <span className="text-[12px] font-bold text-gray-900">Take Photo</span>
-                    </button>
-                    <label className="flex flex-col items-center justify-center gap-1.5 px-3 py-2 h-[120px] rounded-xl bg-gray-50 border border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors">
-                      <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
-                      <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-blue-600 shadow-sm border border-gray-100">
-                        <ImageIcon size={18} />
-                      </div>
-                      <span className="text-[12px] font-bold text-gray-900">Gallery</span>
-                    </label>
+                <p className="text-[14px] font-extrabold text-gray-900 mb-1.5">Upload Photo/s</p>
+                <div className="flex gap-2 items-stretch">
+                  <div
+                    className="w-[88px] h-[80px] rounded-xl flex items-center justify-center flex-shrink-0 cursor-pointer active:opacity-80"
+                    style={{ background: '#C5D8E0' }}
+                  >
+                    <Camera size={26} className="text-gray-500" />
+                  </div>
+                  <div
+                    className="flex-1 h-[80px] rounded-xl flex items-center justify-center cursor-pointer active:opacity-80"
+                    style={{
+                      background: 'rgba(255,255,255,0.4)',
+                      border: '2px dashed rgba(100,140,160,0.5)',
+                    }}
+                  >
+                    <ImageIcon size={28} className="text-gray-400" />
                   </div>
                 </div>
               </div>
 
-              {/* ── Description ── */}
+              {/* Description */}
               <div>
-                <SectionLabel>Description</SectionLabel>
-                <input
+                <p className="text-[14px] font-extrabold text-gray-900 mb-1.5">Description</p>
+                <textarea
                   value={description}
                   onChange={e => setDescription(e.target.value)}
-                  placeholder="Details... (e.g., pole ID, depth, impact)"
-                  className="w-full border border-gray-200 rounded-xl px-3.5 py-3 text-[13px] text-black bg-white placeholder-gray-400 focus:outline-none focus:border-gray-400"
+                  rows={3}
+                  className="w-full bg-white rounded-xl px-3.5 py-3 text-[13px] text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
                 />
               </div>
 
-
-              <div className="h-2" />
+              {/* Affected Area — real Google Map (follows pin) */}
+              <div>
+                <p className="text-[14px] font-extrabold text-gray-900 mb-1.5">Affected Area</p>
+                <AffectedAreaMap lat={pinLat} lng={pinLng} />
+              </div>
             </div>
 
-            {/* ── Submit button ── */}
-            <div className="px-4 pt-2 pb-6 bg-white border-t border-gray-100">
+            {/* Submit */}
+            <div className="absolute bottom-0 left-0 right-0 px-4 pb-6 pt-3">
               <button
                 onClick={handleSubmit}
-                disabled={!address.trim() || !description.trim() || photos.length === 0 || !category.trim()}
-                className="w-full py-4 rounded-2xl text-white text-[16px] font-bold active:scale-[0.98] transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-                style={{ backgroundColor: (!address.trim() || !description.trim() || photos.length === 0 || !category.trim()) ? '#9ca3af' : '#1d4ed8' }}
+                className="w-full py-4 rounded-2xl text-white text-[16px] font-bold active:opacity-90 transition-opacity cursor-pointer shadow-lg"
+                style={{ backgroundColor: '#2563EB' }}
               >
                 {initialData ? 'Save Changes' : 'Submit Report'}
               </button>

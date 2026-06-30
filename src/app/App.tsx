@@ -210,9 +210,10 @@ export default function App() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-slate-950">
+    <div className="flex items-center justify-center min-h-screen" style={{ background: '#D4C97A' }}>
       <div
-        className="relative flex flex-col bg-white overflow-hidden w-full h-dvh sm:max-w-[768px] sm:h-[min(880px,calc(100vh-120px))] sm:rounded-[32px] sm:border-[6px] sm:border-slate-800 sm:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.6)] lg:max-w-full lg:h-screen lg:rounded-none lg:border-0 lg:shadow-none"
+        className="relative overflow-hidden w-full h-dvh sm:max-w-[768px] sm:h-[min(880px,calc(100vh-120px))] sm:rounded-[32px] sm:border-[6px] sm:border-slate-800 sm:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.6)] lg:max-w-full lg:h-screen lg:rounded-none lg:border-0 lg:shadow-none"
+        style={{ background: '#F5F0C0' }}
       >
         {/* ── Login Overlay ── */}
         {!currentUser && (
@@ -224,8 +225,8 @@ export default function App() {
           />
         )}
 
-        {/* ── Content area (map + panels) ── */}
-        <div className="flex-1 relative overflow-hidden min-h-0">
+        {/* ── Content area (map + panels) — fills full height ── */}
+        <div className="absolute inset-0">
           {/* Map — always the base layer */}
           <div className="absolute inset-0">
             <MapView
@@ -245,6 +246,7 @@ export default function App() {
               notifications={notifications}
               onMarkAllRead={handleMarkAllRead}
               onDeleteNotif={handleDeleteNotif}
+              onBack={() => setActivePanel(null)}
             />
           )}
           {activePanel === 'routes' && (
@@ -264,26 +266,14 @@ export default function App() {
                 setActiveRoute(route);
                 setActivePanel(null);
               }}
+              onBack={() => setActivePanel(null)}
             />
           )}
           {activePanel === 'reports' && (
             <ReportsView
               reports={userReports}
               onAddReport={handleAddReportClick}
-              onEditReport={(report) => {
-                setEditingReport(report);
-                setShowAddReport(true);
-              }}
-              onDeleteReport={(reportId, pinId) => {
-                if (confirm('Are you sure you want to delete this report?')) {
-                  fetch(`/api/pins/${pinId}`, {
-                    method: 'DELETE',
-                  }).then(() => {
-                    fetchReports(currentUser?.username);
-                    fetchPins();
-                  }).catch(console.error);
-                }
-              }}
+              onBack={() => setActivePanel(null)}
             />
           )}
           {activePanel === 'profile' && currentUser && (
@@ -298,12 +288,16 @@ export default function App() {
           )}
         </div>
 
-        {/* ── Bottom nav — always rendered in document flow, never overlapped ── */}
-        <BottomNav
-          activePanel={activePanel}
-          onSelect={handlePanelSelect}
-          unreadCount={unreadCount}
-        />
+        {/* ── Bottom nav — floats over the map ── */}
+        <div className="absolute bottom-0 left-0 right-0 z-50 pointer-events-none">
+          <div className="pointer-events-auto">
+            <BottomNav
+              activePanel={activePanel}
+              onSelect={handlePanelSelect}
+              unreadCount={unreadCount}
+            />
+          </div>
+        </div>
 
         {/*
           Full-screen modals are rendered INSIDE the phone shell's relative container
