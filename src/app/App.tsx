@@ -93,8 +93,8 @@ export default function App() {
   };
 
   const fetchReports = (username?: string) => {
-    // If no username is passed, but currentUser exists and is NOT admin, use currentUser.username
-    const targetUser = username || (currentUser && currentUser.role !== 'admin' ? currentUser.username : undefined);
+    const isAdmin = currentUser?.role === 'admin';
+    const targetUser = isAdmin ? undefined : (username || currentUser?.username);
     const url = targetUser ? `/api/reports?username=${targetUser}` : '/api/reports';
     fetch(url)
       .then(res => res.json())

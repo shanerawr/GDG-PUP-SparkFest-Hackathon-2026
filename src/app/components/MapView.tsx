@@ -267,7 +267,8 @@ function MapInner({ pins, activeRoute, onOpenDetail, onClearActiveRoute }: Props
         'peace-and-order': 'Peace and Order',
         'utility-outages': 'Utility Outages',
         'waste-collection': 'Waste Collection',
-        'infrastructure-and-public-works': 'Infrastructure & Public Works',
+        'infrastructure': 'Infrastructure & Public Works',
+        'fire': 'Fire',
         'other': 'Other'
       };
       

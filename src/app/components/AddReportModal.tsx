@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { setOptions, importLibrary } from '@googlemaps/js-api-loader';
 import {
-  X, Camera, Droplets, Zap, AlertCircle, ImageIcon, CheckCircle, AlertTriangle, Shield, Trash2, HardHat
+  X, Camera, Droplets, Zap, AlertCircle, ImageIcon, CheckCircle, AlertTriangle, Shield, Trash2, HardHat, Flame
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { PanelHeader } from './PanelHeader';
@@ -23,7 +23,8 @@ const CATEGORIES = [
   { key: 'peace-and-order', label: 'Peace & Order', Icon: Shield },
   { key: 'utility-outages', label: 'Utility Outages', Icon: Zap },
   { key: 'waste-collection', label: 'Waste', Icon: Trash2 },
-  { key: 'infrastructure-and-public-works', label: 'Infra & Public Works', Icon: HardHat },
+  { key: 'infrastructure', label: 'Infra & Public Works', Icon: HardHat },
+  { key: 'fire', label: 'Fire', Icon: Flame },
   { key: 'other', label: 'Other', Icon: AlertCircle },
 ];
 

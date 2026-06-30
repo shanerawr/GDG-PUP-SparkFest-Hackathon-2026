@@ -123,7 +123,7 @@ export function ReportsView({
       style={{ background: '#F5F0C0' }}
     >
       {/* Header */}
-      <PanelHeader title={isAdmin ? "Reports" : "My Reports"} onBack={onBack} />
+      <PanelHeader title={isAdmin || currentUser?.role === 'lgu' || currentUser?.role === 'authority' ? "Reports" : "My Reports"} onBack={onBack} />
 
       {/* List */}
       <div className="flex-1 overflow-y-auto px-4 pb-28">
@@ -153,8 +153,8 @@ export function ReportsView({
         )}
       </div>
 
-      {/* FAB - Hide for admins */}
-      {!isAdmin && (
+      {/* FAB - Hide for admins and responders */}
+      {!isAdmin && currentUser?.role !== 'lgu' && currentUser?.role !== 'authority' && (
         <button
           id="add-report-fab"
           onClick={onAddReport}

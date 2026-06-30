@@ -1,7 +1,6 @@
 export type HazardLevel = 'minor' | 'needs-attention' | 'urgent' | 'life-threatening';
 export type ReportStatus = 'pending' | 'acknowledged' | 'in-progress' | 'resolved';
-export type ReportType = 'flood' | 'road-damage' | 'peace-and-order' | 'utility-outages' | 'waste-collection' | 'infrastructure-and-public-works' | 'other';
-
+export type ReportType = 'flood' | 'road-damage' | 'peace-and-order' | 'utility-outages' | 'waste-collection' | 'infrastructure' | 'fire' | 'other';
 export type AppPanel = 'notifications' | 'routes' | 'reports' | 'profile' | null;
 
 export interface MapPin {
@@ -59,17 +58,15 @@ export interface UserProfile {
 export interface Comment {
   id: string;
   author: string;
-  content: string;
-  timeAgo: string;
-  role?: 'citizen' | 'authority' | 'lgu' | 'admin';
+  role: string;
   governmentCategory?: string;
-  parentId?: string;
-  upvotes?: number;
-  downvotes?: number;
-  flags?: number;
-  upvotedBy?: string[];
-  downvotedBy?: string[];
-  flaggedBy?: string[];
+  content: string;
+  createdAt: string;
+  timeAgo: string;
+  upvotes: number;
+  downvotes: number;
+  flags: number;
+  parentId?: string; // For nested replies
 }
 
 export interface AppNotification {
@@ -87,7 +84,7 @@ export interface AppNotification {
 export interface UserReport {
   id: string;
   typeName: string;
-  typeKey: ReportType;
+  typeKey: string;
   moreDetails: string;
   date: string;
   time: string;
@@ -111,7 +108,8 @@ export const REPORT_TYPE_LABELS: Record<ReportType, string> = {
   'peace-and-order': 'Peace and Order',
   'utility-outages': 'Utility Outages / Walang Kuryente o Tubig',
   'waste-collection': 'Waste Collection / Basura',
-  'infrastructure-and-public-works': 'Infrastructure & Public Works',
+  infrastructure: 'Infrastructure & Public Works',
+  fire: 'Fire / Sunog',
   other: 'Other / Iba pa',
 };
 
@@ -121,6 +119,7 @@ export const reportSvgPaths: Record<string, string> = {
   'peace-and-order': 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z',
   'utility-outages': 'M13 2L3 14h9l-1 8 10-12h-9l1-8z',
   'waste-collection': 'M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2',
-  'infrastructure-and-public-works': 'M2 22h20M12 2L2 12h3v8h14v-8h3L12 2z',
+  infrastructure: 'M2 22h20M12 2L2 12h3v8h14v-8h3L12 2z',
+  fire: 'M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z',
   other: 'M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01',
 };

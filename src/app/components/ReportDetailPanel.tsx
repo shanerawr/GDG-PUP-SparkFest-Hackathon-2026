@@ -129,7 +129,8 @@ export function ReportDetailPanel({ pin, onClose, currentUser, onCommentAdded, o
     'peace-and-order': 'Peace and Order',
     'utility-outages': 'Utility Outages',
     'waste-collection': 'Waste Collection',
-    'infrastructure-and-public-works': 'Infrastructure & Public Works',
+    'infrastructure': 'Infrastructure & Public Works',
+    'fire': 'Fire',
     'other': 'Other'
   };
   const categoryName = CATEGORIES[pin.type] || pin.title;
