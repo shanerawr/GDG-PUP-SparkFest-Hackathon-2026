@@ -322,24 +322,11 @@ export function ReportDetailPanel({ pin, onClose, currentUser, onCommentAdded, o
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto">
         <div className="px-4 pt-4 pb-8">
-          {/* Title */}
-          <h2 className="text-[18px] font-extrabold text-gray-900 leading-snug mb-1">{categoryName}</h2>
-          <p className="text-[14px] text-gray-700 leading-relaxed mb-4">{pin.description}</p>
-
-          {/* Reporter row */}
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
-              <span className="text-[12px] font-bold text-gray-600">
-                {pin.reportedBy.slice(0, 2).toUpperCase()}
-              </span>
-            </div>
-            <div className="flex-1">
-              <p className="text-[13px] font-semibold text-gray-900">@{pin.reportedBy}</p>
-              <p className="text-[11px] text-gray-400">{pin.timeAgo}</p>
-            </div>
-            {/* Status */}
+          {/* Title & Status */}
+          <div className="flex items-center justify-between gap-3 mb-1.5 flex-wrap">
+            <h2 className="text-[18px] font-extrabold text-gray-900 leading-snug">{categoryName}</h2>
             {currentUser && ['admin', 'authority', 'lgu'].includes(currentUser.role || '') ? (
-              <div className="flex items-center gap-1 bg-gray-50 border border-gray-200 rounded-xl px-2 py-1">
+              <div className="flex items-center gap-1 bg-gray-50 border border-gray-200 rounded-xl px-2.5 py-1">
                 <StatusIcon size={11} style={{ color: statusColor }} />
                 <select
                   value={pinStatus}
@@ -355,13 +342,48 @@ export function ReportDetailPanel({ pin, onClose, currentUser, onCommentAdded, o
               </div>
             ) : (
               <span
-                className="flex items-center gap-1 text-[11px] font-semibold"
+                className="flex items-center gap-1 text-[11px] font-semibold bg-gray-50 border border-gray-100 rounded-full px-2.5 py-1"
                 style={{ color: statusColor }}
               >
                 <StatusIcon size={11} />
                 {statusLabel}
               </span>
             )}
+          </div>
+          <p className="text-[14px] text-gray-700 leading-relaxed mb-4">{pin.description}</p>
+
+          {/* Reporter row */}
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
+              <span className="text-[12px] font-bold text-gray-600">
+                {pin.reportedBy.slice(0, 2).toUpperCase()}
+              </span>
+            </div>
+            <div className="flex-1">
+              <p className="text-[13px] font-semibold text-gray-900">@{pin.reportedBy}</p>
+              <p className="text-[11px] text-gray-400">{pin.timeAgo}</p>
+            </div>
+            {/* Interaction icons in place of status */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => {
+                  if (!upvoted) {
+                    setUpvoted(true);
+                    setUpvotes((v) => v + 1);
+                    fetch(`/api/pins/${pin.id}/upvote`, { method: 'POST' }).catch((err) => console.error(err));
+                  }
+                }}
+                className="flex items-center gap-1 text-[13px] font-bold active:scale-95 transition-transform cursor-pointer"
+                style={{ color: upvoted ? '#16a34a' : '#6b7280' }}
+              >
+                <ThumbsUp size={14} />
+                <span>{upvotes}</span>
+              </button>
+              <button className="flex items-center gap-1 text-[13px] font-bold text-gray-500 active:scale-95 transition-transform cursor-pointer">
+                <Share2 size={14} />
+                <span>Share</span>
+              </button>
+            </div>
           </div>
 
           {/* Location row */}
@@ -457,36 +479,6 @@ export function ReportDetailPanel({ pin, onClose, currentUser, onCommentAdded, o
                 </form>
               </div>
             )}
-          </div>
-
-          {/* Divider */}
-          <div className="h-px bg-gray-100 mb-4" />
-
-          {/* Interaction row */}
-          <div className="flex items-center gap-5">
-            <button
-              onClick={() => {
-                if (!upvoted) {
-                  setUpvoted(true);
-                  setUpvotes((v) => v + 1);
-                  fetch(`/api/pins/${pin.id}/upvote`, { method: 'POST' }).catch((err) => console.error(err));
-                }
-              }}
-              className="flex items-center gap-2 text-[14px] font-semibold"
-              style={{ color: upvoted ? '#16a34a' : '#6b7280' }}
-            >
-              <ThumbsUp size={18} />
-              {upvotes}
-            </button>
-            <button className="flex items-center gap-2 text-[14px] font-semibold text-gray-500">
-              <MessageCircle size={18} />
-              Reply
-            </button>
-            <div className="flex-1" />
-            <button className="flex items-center gap-2 text-[14px] font-semibold text-gray-500">
-              <Share2 size={18} />
-              Share
-            </button>
           </div>
         </div>
       </div>
