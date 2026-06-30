@@ -193,7 +193,8 @@ function MapInner({ pins, activeRoute, onOpenDetail, onClearActiveRoute }: Props
     const visible = filter === 'all' ? pins : pins.filter(p => p.hazardLevel === filter);
 
     visible.forEach((pin, idx) => {
-      const { bg } = HAZARD_COLORS[pin.hazardLevel];
+      const hazardColor = HAZARD_COLORS[pin.hazardLevel] || HAZARD_COLORS['needs-attention'];
+      const { bg } = hazardColor;
 
       // Determine if pin is near the active route path
       const near = activeRoute ? isNearRoute(pin, activeRoute.routePath) : false;

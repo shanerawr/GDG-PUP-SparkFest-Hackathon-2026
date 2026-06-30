@@ -261,6 +261,7 @@ function RoutePreviewMap({
   travelMode,
   placesReady,
   pins,
+  selectedRouteIndex,
 }: {
   startAddress: string;
   destAddress: string;
@@ -273,6 +274,7 @@ function RoutePreviewMap({
   travelMode: string;
   placesReady: boolean;
   pins: MapPin[];
+  selectedRouteIndex: number;
 }) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
@@ -280,6 +282,7 @@ function RoutePreviewMap({
   const directionsServiceRef = useRef<google.maps.DirectionsService | null>(null);
   const markersRef = useRef<google.maps.Marker[]>([]);
   const [mapsLoaded, setMapsLoaded] = useState(false);
+  const lastResultRef = useRef<google.maps.DirectionsResult | null>(null);
 
   useEffect(() => {
     if (!placesReady || !mapRef.current) return;
@@ -390,6 +393,7 @@ function RoutePreviewMap({
     }
 
     if (!origin || !destination) {
+      lastResultRef.current = null;
       directionsRendererRef.current.setDirections({ routes: [] } as any);
       return;
     }
@@ -407,11 +411,15 @@ function RoutePreviewMap({
         origin,
         destination,
         travelMode: gmTravelMode,
+        provideRouteAlternatives: true,
       },
       (result, status) => {
         if (status === google.maps.DirectionsStatus.OK && result && directionsRendererRef.current) {
+          lastResultRef.current = result;
           directionsRendererRef.current.setDirections(result);
+          directionsRendererRef.current.setRouteIndex(selectedRouteIndex || 0);
         } else {
+          lastResultRef.current = null;
           directionsRendererRef.current?.setDirections({ routes: [] } as any);
         }
       }
@@ -429,6 +437,12 @@ function RoutePreviewMap({
     travelMode,
     mapsLoaded,
   ]);
+
+  useEffect(() => {
+    if (directionsRendererRef.current && lastResultRef.current) {
+      directionsRendererRef.current.setRouteIndex(selectedRouteIndex || 0);
+    }
+  }, [selectedRouteIndex]);
 
   return (
     <div className="relative w-full h-48 rounded-2xl border border-gray-200 overflow-hidden bg-gray-50 mb-3 shadow-inner">
@@ -726,7 +740,7 @@ export function AddRouteModal({ onClose, onSave, pins, editRoute }: Props) {
             />
 
             {/* Body */}
-            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5">
+            <div className="flex-1 overflow-y-auto px-4 pt-4 pb-36 space-y-5">
 
               {/* Route Name */}
               <div>
@@ -838,6 +852,7 @@ export function AddRouteModal({ onClose, onSave, pins, editRoute }: Props) {
                 travelMode={travelMode}
                 placesReady={placesReady}
                 pins={pins}
+                selectedRouteIndex={selectedRouteIndex}
               />
 
               {/* Route Options */}

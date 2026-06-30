@@ -315,6 +315,7 @@ app.post('/api/routes', async (req, res) => {
       duration: req.body.duration,
       lastEdited: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
       nearbyReports: req.body.nearbyReports || 0,
+      travelMode: req.body.travelMode,
       routePath: req.body.routePath || []
     };
     const result = await db.collection('routes').insertOne(newRoute);
@@ -350,6 +351,7 @@ app.put('/api/routes/:id', async (req, res) => {
       duration: req.body.duration,
       lastEdited: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
       nearbyReports: req.body.nearbyReports || 0,
+      travelMode: req.body.travelMode,
       routePath: req.body.routePath || [],
     };
     const result = await db.collection('routes').findOneAndUpdate(
