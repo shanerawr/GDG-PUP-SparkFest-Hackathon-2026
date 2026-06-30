@@ -21,8 +21,8 @@ const getAvatarColor = (name: string) => {
 
 export function LoginOverlay({ onLoginSuccess }: Props) {
   const [isSignUp, setIsSignUp] = useState(false);
-  const [username, setUsername] = useState('juandelacruz');
-  const [displayName, setDisplayName] = useState('Juan dela Cruz');
+  const [username, setUsername] = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
