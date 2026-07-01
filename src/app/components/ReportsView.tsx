@@ -228,7 +228,11 @@ export function ReportsView({
   const isAdmin = currentUser?.role === 'admin';
   const isResponder = currentUser?.role === 'lgu' || currentUser?.role === 'authority';
   const isCitizen = !isAdmin && !isResponder;
-  const govCategory = currentUser?.governmentCategory?.toLowerCase();
+  const govCategory = (currentUser?.governmentCategory || (
+    (currentUser?.username || '').toLowerCase().includes('pnp') ? 'PNP' :
+    (currentUser?.username || '').toLowerCase().includes('bfp') ? 'BFP' :
+    (currentUser?.username || '').toLowerCase().includes('drrmo') ? 'DRRMO' : 'LGU'
+  ))?.toLowerCase();
 
   const [activeTab, setActiveTab] = useState<'my-reports' | 'summary'>('my-reports');
 

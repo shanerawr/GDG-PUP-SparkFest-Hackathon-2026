@@ -136,7 +136,11 @@ export default function App() {
     const isResponder = currentUser.role === 'authority' || currentUser.role === 'lgu';
     if (!isResponder) return activePins;
 
-    const govCat = currentUser.governmentCategory?.toLowerCase();
+    const govCat = (currentUser?.governmentCategory || (
+      (currentUser?.username || '').toLowerCase().includes('pnp') ? 'PNP' :
+      (currentUser?.username || '').toLowerCase().includes('bfp') ? 'BFP' :
+      (currentUser?.username || '').toLowerCase().includes('drrmo') ? 'DRRMO' : 'LGU'
+    ))?.toLowerCase();
     const userMuni = currentUser.municipality?.toLowerCase().trim();
 
     return activePins.filter(p => {
