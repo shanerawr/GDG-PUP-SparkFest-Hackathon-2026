@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, ThumbsUp, ThumbsDown, Flag, MessageCircle, Share2, CheckCircle, Clock, RefreshCw, MapPin, AlertTriangle } from 'lucide-react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { LandscapeThumb } from './LandscapeThumb';
 import type { MapPin as MapPinType, Comment, UserProfile, ReportStatus } from '../types';
 import { HAZARD_COLORS } from '../types';
@@ -125,6 +125,7 @@ export function ReportDetailPanel({ pin, onClose, currentUser, onCommentAdded, o
   const [replyingTo, setReplyingTo] = useState<{ id: string, author: string } | null>(null);
   const [flaggingCommentId, setFlaggingCommentId] = useState<string | null>(null);
   const [loadingComments, setLoadingComments] = useState(true);
+  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
 
   const handleCategoryChange = (newCategory: string) => {
     setPinCategory(newCategory);
@@ -353,7 +354,12 @@ export function ReportDetailPanel({ pin, onClose, currentUser, onCommentAdded, o
       {/* Hero image */}
       <div className="relative flex-shrink-0" style={{ height: 220 }}>
         {heroPhoto ? (
-          <img src={heroPhoto} alt={pin.title} className="w-full h-full object-cover" />
+          <img
+            src={heroPhoto}
+            alt={pin.title}
+            className="w-full h-full object-cover cursor-pointer hover:opacity-95 transition-opacity"
+            onClick={() => setSelectedPhoto(heroPhoto)}
+          />
         ) : (
           <LandscapeThumb className="w-full h-full" />
         )}
@@ -535,7 +541,13 @@ export function ReportDetailPanel({ pin, onClose, currentUser, onCommentAdded, o
               <p className="text-[12px] font-bold text-gray-400 uppercase tracking-wider mb-2 mt-4">Photos</p>
               <div className="flex gap-2 mb-5 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
                 {allPhotos.map((p, idx) => (
-                  <img key={idx} src={p} alt={`Thumbnail ${idx + 1}`} className="w-[120px] h-20 object-cover rounded-xl border border-gray-200 flex-shrink-0" />
+                  <img
+                    key={idx}
+                    src={p}
+                    alt={`Thumbnail ${idx + 1}`}
+                    className="w-[120px] h-20 object-cover rounded-xl border border-gray-200 flex-shrink-0 cursor-pointer hover:opacity-90 transition-opacity"
+                    onClick={() => setSelectedPhoto(p)}
+                  />
                 ))}
               </div>
             </>
@@ -618,6 +630,35 @@ export function ReportDetailPanel({ pin, onClose, currentUser, onCommentAdded, o
           }}
         />
       )}
+
+      {/* Lightbox / Fullscreen Image Viewer Modal */}
+      <AnimatePresence>
+        {selectedPhoto && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setSelectedPhoto(null)}
+            className="fixed inset-0 bg-black/90 backdrop-blur-md z-[200] flex items-center justify-center p-4 cursor-pointer"
+          >
+            <button
+              onClick={() => setSelectedPhoto(null)}
+              className="absolute top-6 right-6 w-11 h-11 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center transition-colors z-10"
+            >
+              <X size={24} />
+            </button>
+            <motion.img
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.9 }}
+              src={selectedPhoto}
+              alt="Expanded hazard view"
+              className="max-w-full max-h-[85vh] object-contain rounded-2xl shadow-2xl cursor-default"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
