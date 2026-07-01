@@ -243,12 +243,21 @@ export function ReportsView({
 
       const userMuni = currentUser?.municipality?.toLowerCase().trim();
       if (userMuni) {
-        const reportLoc = (r.location || r.address || '').toLowerCase();
-        const muniKey = userMuni.replace('city of ', '').replace(' city', '').replace('city', '').trim();
-        if (!reportLoc.includes(muniKey)) return false;
+        const reportLoc = `${r.location || ''} ${r.address || ''} ${r.description || ''} ${r.title || ''} ${r.typeName || ''}`.toLowerCase();
+        const muniKey = userMuni.replace(/(city of|city|municipality of|municipality)/g, '').trim();
+        if (muniKey && !reportLoc.includes(muniKey)) return false;
       }
 
-      const type = r.typeKey || (r as any).type;
+      const rawType = (r.typeKey || (r as any).type || r.typeName || '').toLowerCase();
+      let type = rawType;
+      if (rawType.includes('peace') || rawType.includes('order')) type = 'peace-and-order';
+      else if (rawType.includes('road')) type = 'road-damage';
+      else if (rawType.includes('flood')) type = 'flood';
+      else if (rawType.includes('fire')) type = 'fire';
+      else if (rawType.includes('utility') || rawType.includes('outage') || rawType.includes('electric') || rawType.includes('water')) type = 'utility-outages';
+      else if (rawType.includes('waste') || rawType.includes('garbage') || rawType.includes('trash')) type = 'waste-collection';
+      else if (rawType.includes('infra') || rawType.includes('public') || rawType.includes('work')) type = 'infrastructure';
+
       switch (type) {
         case 'infrastructure':
           return govCategory === 'lgu';
@@ -265,7 +274,7 @@ export function ReportsView({
         case 'other':
           return govCategory === 'lgu';
         default:
-          return false;
+          return govCategory === 'lgu';
       }
     }
     return true; // Citizens see their own

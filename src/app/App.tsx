@@ -146,7 +146,16 @@ export default function App() {
     return activePins.filter(p => {
       if (!govCat) return false;
       let catMatch = false;
-      const type = p.type;
+      const rawType = (p.type || (p as any).typeKey || '').toLowerCase();
+      let type = rawType;
+      if (rawType.includes('peace') || rawType.includes('order')) type = 'peace-and-order';
+      else if (rawType.includes('road')) type = 'road-damage';
+      else if (rawType.includes('flood')) type = 'flood';
+      else if (rawType.includes('fire')) type = 'fire';
+      else if (rawType.includes('utility') || rawType.includes('outage') || rawType.includes('electric') || rawType.includes('water')) type = 'utility-outages';
+      else if (rawType.includes('waste') || rawType.includes('garbage') || rawType.includes('trash')) type = 'waste-collection';
+      else if (rawType.includes('infra') || rawType.includes('public') || rawType.includes('work')) type = 'infrastructure';
+
       switch (type) {
         case 'infrastructure': catMatch = govCat === 'lgu'; break;
         case 'peace-and-order': catMatch = govCat === 'pnp' || govCat === 'barangay'; break;
@@ -156,14 +165,14 @@ export default function App() {
         case 'waste-collection': catMatch = govCat === 'lgu' || govCat === 'barangay'; break;
         case 'road-damage':
         case 'other': catMatch = govCat === 'lgu'; break;
-        default: catMatch = false;
+        default: catMatch = govCat === 'lgu';
       }
       if (!catMatch) return false;
 
       if (userMuni) {
-        const loc = (p.address || p.location || '').toLowerCase();
-        const muniKey = userMuni.replace('city of ', '').replace(' city', '').replace('city', '').trim();
-        if (!loc.includes(muniKey)) return false;
+        const loc = `${p.address || ''} ${p.location || ''} ${p.description || ''} ${p.title || ''}`.toLowerCase();
+        const muniKey = userMuni.replace(/(city of|city|municipality of|municipality)/g, '').trim();
+        if (muniKey && !loc.includes(muniKey)) return false;
       }
       return true;
     });
