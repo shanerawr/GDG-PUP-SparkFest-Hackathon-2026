@@ -1,35 +1,56 @@
 @font-face {
   font-family: 'Bubbleboddy Neue';
-  src: url('../assets/fonts/bubbleboddy_neue/bubbleboddyneue-regular trial.ttf') format('truetype');
-  font-weight: normal;
-  font-style: normal;
-}
-
-@font-face {
-  font-family: 'Bubbleboddy Neue';
-  src: url('../assets/fonts/bubbleboddy_neue/BubbleboddyNeue-Bold Trial.ttf') format('truetype');
-  font-weight: bold;
-  font-style: normal;
-}
-
-@font-face {
-  font-family: 'Bubbleboddy Neue';
-  src: url('../assets/fonts/bubbleboddy_neue/BubbleboddyNeue-ExtraBold Trial.ttf') format('truetype');
-  font-weight: 800;
-  font-style: normal;
-}
-
-@font-face {
-  font-family: 'Bubbleboddy Neue';
-  src: url('../assets/fonts/bubbleboddy_neue/BubbleboddyNeue-Light Trial.ttf') format('truetype');
-  font-weight: 300;
+  src: url('../assets/fonts/bubbleboddy_neue/BubbleboddyNeue-Thin Trial.ttf') format('truetype');
+  font-weight: 100;
   font-style: normal;
 }
 
 @font-face {
   font-family: 'Bubbleboddy Neue';
   src: url('../assets/fonts/bubbleboddy_neue/BubbleboddyNeue-Thin Trial.ttf') format('truetype');
-  font-weight: 100;
+  font-weight: 300;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Bubbleboddy Neue';
+  src: url('../assets/fonts/bubbleboddy_neue/BubbleboddyNeue-Light Trial.ttf') format('truetype');
+  font-weight: normal; /* 400 */
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Bubbleboddy Neue';
+  src: url('../assets/fonts/bubbleboddy_neue/bubbleboddyneue-regular trial.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Bubbleboddy Neue';
+  src: url('../assets/fonts/bubbleboddy_neue/bubbleboddyneue-regular trial.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Bubbleboddy Neue';
+  src: url('../assets/fonts/bubbleboddy_neue/bubbleboddyneue-regular trial.ttf') format('truetype');
+  font-weight: bold; /* 700 */
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Bubbleboddy Neue';
+  src: url('../assets/fonts/bubbleboddy_neue/BubbleboddyNeue-Bold Trial.ttf') format('truetype');
+  font-weight: 800; /* ExtraBold */
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Bubbleboddy Neue';
+  src: url('../assets/fonts/bubbleboddy_neue/BubbleboddyNeue-ExtraBold Trial.ttf') format('truetype');
+  font-weight: 900; /* Black */
   font-style: normal;
 }
 
