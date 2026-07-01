@@ -563,6 +563,7 @@ function AdminManagementPage({ currentUser }: { currentUser: UserProfile }) {
   const [displayName, setDisplayName] = useState('');
   const [password, setPassword] = useState('');
   const [govCategory, setGovCategory] = useState<string>('LGU');
+  const [municipality, setMunicipality] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -572,6 +573,7 @@ function AdminManagementPage({ currentUser }: { currentUser: UserProfile }) {
   const [editDisplayName, setEditDisplayName] = useState('');
   const [editPassword, setEditPassword] = useState('');
   const [editGovCategory, setEditGovCategory] = useState('');
+  const [editMunicipality, setEditMunicipality] = useState('');
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
 
@@ -612,6 +614,7 @@ function AdminManagementPage({ currentUser }: { currentUser: UserProfile }) {
         password: password.trim(),
         role: govCategory === 'LGU' ? 'lgu' : 'authority',
         governmentCategory: govCategory,
+        municipality: municipality.trim(),
       }),
     })
       .then((res) => res.json())
@@ -623,6 +626,7 @@ function AdminManagementPage({ currentUser }: { currentUser: UserProfile }) {
           setUsername('');
           setDisplayName('');
           setPassword('');
+          setMunicipality('');
           fetchAuthorities();
         }
       })
@@ -636,6 +640,7 @@ function AdminManagementPage({ currentUser }: { currentUser: UserProfile }) {
     setEditDisplayName(auth.displayName || '');
     setEditPassword('');
     setEditGovCategory(auth.governmentCategory || 'LGU');
+    setEditMunicipality(auth.municipality || '');
     setEditError(null);
   };
 
@@ -654,6 +659,7 @@ function AdminManagementPage({ currentUser }: { currentUser: UserProfile }) {
         password: editPassword.trim() || undefined,
         governmentCategory: editGovCategory,
         role: editGovCategory === 'LGU' ? 'lgu' : 'authority',
+        municipality: editMunicipality.trim(),
       }),
     })
       .then((res) => res.json())
@@ -765,6 +771,14 @@ function AdminManagementPage({ currentUser }: { currentUser: UserProfile }) {
                 onChange={(e) => setEditPassword(e.target.value)}
                 className="w-full bg-white border border-[#47B3E8]/20 rounded-xl px-4 py-3 text-[13px] font-semibold text-gray-900 focus:outline-none focus:border-[#47B3E8] focus:bg-white transition-colors"
               />
+              <input
+                type="text"
+                placeholder="Municipality (e.g. Quezon City)"
+                value={editMunicipality}
+                onChange={(e) => setEditMunicipality(e.target.value)}
+                className="w-full bg-white border border-[#47B3E8]/20 rounded-xl px-4 py-3 text-[13px] font-semibold text-gray-900 focus:outline-none focus:border-[#47B3E8] focus:bg-white transition-colors"
+                required
+              />
               <select
                 value={editGovCategory}
                 onChange={(e) => setEditGovCategory(e.target.value)}
@@ -836,6 +850,7 @@ function AdminManagementPage({ currentUser }: { currentUser: UserProfile }) {
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               className="w-full bg-white border border-[#47B3E8]/20 rounded-xl px-4 py-3 text-[13px] font-semibold text-gray-900 focus:outline-none focus:border-[#47B3E8] focus:bg-white transition-colors"
+              required
             />
             <input
               type="text"
@@ -850,6 +865,14 @@ function AdminManagementPage({ currentUser }: { currentUser: UserProfile }) {
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              className="w-full bg-white border border-[#47B3E8]/20 rounded-xl px-4 py-3 text-[13px] font-semibold text-gray-900 focus:outline-none focus:border-[#47B3E8] focus:bg-white transition-colors"
+              required
+            />
+            <input
+              type="text"
+              placeholder="Municipality (e.g. Quezon City)"
+              value={municipality}
+              onChange={(e) => setMunicipality(e.target.value)}
               className="w-full bg-white border border-[#47B3E8]/20 rounded-xl px-4 py-3 text-[13px] font-semibold text-gray-900 focus:outline-none focus:border-[#47B3E8] focus:bg-white transition-colors"
               required
             />

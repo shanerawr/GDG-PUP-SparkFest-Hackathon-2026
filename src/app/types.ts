@@ -1,5 +1,5 @@
 export type HazardLevel = 'minor' | 'needs-attention' | 'urgent' | 'life-threatening';
-export type ReportStatus = 'pending-approval' | 'pending-resolution' | 'resolved' | 'pending' | 'in-progress' | 'acknowledged';
+export type ReportStatus = 'unresolved' | 'pending-resolution' | 'resolved' | 'pending' | 'in-progress' | 'acknowledged';
 export type ReportType = 'flood' | 'road-damage' | 'peace-and-order' | 'utility-outages' | 'waste-collection' | 'infrastructure' | 'fire' | 'other';
 export type AppPanel = 'notifications' | 'routes' | 'reports' | 'profile' | null;
 

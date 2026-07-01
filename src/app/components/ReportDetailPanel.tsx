@@ -103,11 +103,12 @@ interface Props {
 }
 
 const statusConfig = {
-  'pending-approval': { label: 'Pending Approval', Icon: Clock, color: '#6b7280' },
+  unresolved: { label: 'Unresolved', Icon: Clock, color: '#b91c1c' },
   'pending-resolution': { label: 'Pending Resolution', Icon: RefreshCw, color: '#d97706' },
   resolved: { label: 'Resolved', Icon: CheckCircle, color: '#16a34a' },
   // For legacy data fallback:
-  pending: { label: 'Pending Approval', Icon: Clock, color: '#6b7280' },
+  pending: { label: 'Unresolved', Icon: Clock, color: '#b91c1c' },
+  'pending-approval': { label: 'Unresolved', Icon: Clock, color: '#b91c1c' },
   'in-progress': { label: 'Pending Resolution', Icon: RefreshCw, color: '#d97706' },
   acknowledged: { label: 'Pending Resolution', Icon: RefreshCw, color: '#d97706' },
 };
@@ -121,7 +122,22 @@ export function ReportDetailPanel({ pin, onClose, currentUser, onCommentAdded, o
   const [flaggingCommentId, setFlaggingCommentId] = useState<string | null>(null);
   const [loadingComments, setLoadingComments] = useState(true);
   const [pinStatus, setPinStatus] = useState<ReportStatus>(pin.status);
+  const [pinCategory, setPinCategory] = useState<string>(pin.type || 'other');
   const [shared, setShared] = useState(false);
+
+  const handleCategoryChange = (newCategory: string) => {
+    setPinCategory(newCategory);
+    fetch(`/api/pins/${pin.id}/category`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ category: newCategory, username: currentUser.username }),
+    })
+      .then((res) => res.json())
+      .then(() => {
+        if (onStatusUpdated) onStatusUpdated();
+      })
+      .catch((err) => console.error(err));
+  };
 
   const handleShare = () => {
     const shareUrl = `${window.location.origin}?pinId=${pin.id}`;
@@ -341,13 +357,25 @@ export function ReportDetailPanel({ pin, onClose, currentUser, onCommentAdded, o
         <div className="px-4 pt-4 pb-8">
           {/* Title & Status */}
           <div className="flex items-center justify-between gap-3 mb-1.5 flex-wrap">
-            <h2 className="text-[18px] font-extrabold text-gray-900 leading-snug">{categoryName}</h2>
+            {currentUser && ['admin', 'authority', 'lgu'].includes(currentUser.role || '') ? (
+              <select
+                value={pinCategory}
+                onChange={(e) => handleCategoryChange(e.target.value)}
+                className="text-[18px] font-extrabold text-gray-900 leading-snug bg-transparent border-b-2 border-dashed border-gray-300 focus:border-blue-500 outline-none cursor-pointer p-0 pb-1"
+              >
+                {Object.entries(CATEGORIES).map(([key, label]) => (
+                  <option key={key} value={key} className="text-[14px] font-medium">{label}</option>
+                ))}
+              </select>
+            ) : (
+              <h2 className="text-[18px] font-extrabold text-gray-900 leading-snug">{CATEGORIES[pinCategory] || categoryName}</h2>
+            )}
             {currentUser && ['admin', 'authority', 'lgu'].includes(currentUser.role || '') ? (
               <div className="flex items-center gap-1 bg-gray-50 border border-gray-200 rounded-xl px-2.5 py-1">
                 <StatusIcon size={11} style={{ color: statusColor }} />
                 <select
                   value={
-                    pinStatus === 'pending' ? 'pending-approval' :
+                    (pinStatus === 'pending' || pinStatus === 'pending-approval') ? 'unresolved' :
                     (pinStatus === 'acknowledged' || pinStatus === 'in-progress') ? 'pending-resolution' :
                     pinStatus
                   }
@@ -355,7 +383,7 @@ export function ReportDetailPanel({ pin, onClose, currentUser, onCommentAdded, o
                   className="text-[11.5px] font-bold bg-transparent border-0 outline-none p-0 cursor-pointer focus:ring-0"
                   style={{ color: statusColor }}
                 >
-                  <option value="pending-approval" className="text-gray-700 font-medium">Pending Approval</option>
+                  <option value="unresolved" className="text-red-700 font-medium">Unresolved</option>
                   <option value="pending-resolution" className="text-amber-600 font-medium">Pending Resolution</option>
                   <option value="resolved" className="text-green-600 font-medium">Resolved</option>
                 </select>

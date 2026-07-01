@@ -347,7 +347,27 @@ export default function App() {
               onAddReport={handleAddReportClick}
               onEditReport={handleEditReportClick}
               onDeleteReport={handleDeleteReport}
-              onBack={() => setActivePanel(null)}
+              onBack={() => handlePanelSelect(null)}
+              onStatusChange={(pinId, newStatus) => {
+                fetch(`/api/pins/${pinId}/status`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ status: newStatus, username: currentUser!.username }),
+                }).then(() => {
+                  fetchReports(currentUser!.username);
+                  fetchPins();
+                }).catch(console.error);
+              }}
+              onCategoryChange={(pinId, newCategory) => {
+                fetch(`/api/pins/${pinId}/category`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ category: newCategory, username: currentUser!.username }),
+                }).then(() => {
+                  fetchReports(currentUser!.username);
+                  fetchPins();
+                }).catch(console.error);
+              }}
             />
           )}
           {activePanel === 'profile' && currentUser && (

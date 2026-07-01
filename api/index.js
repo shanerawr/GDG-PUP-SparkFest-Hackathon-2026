@@ -91,13 +91,15 @@ async function seedDatabase() {
 
   // Migrate database statuses
   try {
-    await db.collection('pins').updateMany({ status: 'pending' }, { $set: { status: 'pending-approval' } });
+    await db.collection('pins').updateMany({ status: 'pending' }, { $set: { status: 'unresolved' } });
+    await db.collection('pins').updateMany({ status: 'pending-approval' }, { $set: { status: 'unresolved' } });
     await db.collection('pins').updateMany({ status: 'in-progress' }, { $set: { status: 'pending-resolution' } });
     await db.collection('pins').updateMany({ status: 'acknowledged' }, { $set: { status: 'pending-resolution' } });
-    await db.collection('reports').updateMany({ status: 'pending' }, { $set: { status: 'pending-approval' } });
+    await db.collection('reports').updateMany({ status: 'pending' }, { $set: { status: 'unresolved' } });
+    await db.collection('reports').updateMany({ status: 'pending-approval' }, { $set: { status: 'unresolved' } });
     await db.collection('reports').updateMany({ status: 'in-progress' }, { $set: { status: 'pending-resolution' } });
     await db.collection('reports').updateMany({ status: 'acknowledged' }, { $set: { status: 'pending-resolution' } });
-    console.log("Database statuses successfully migrated to pending-approval and pending-resolution");
+    console.log("Database statuses successfully migrated to unresolved and pending-resolution");
   } catch (err) {
     console.error("Database migration error:", err);
   }
@@ -143,7 +145,7 @@ app.post('/api/pins', async (req, res) => {
       timeAgo: 'Just now',
       upvotes: 0,
       description: req.body.description || '',
-      status: 'pending-approval',
+      status: 'unresolved',
       threadCount: 0,
       photo: req.body.photo || null,
       photos: req.body.photos || (req.body.photo ? [req.body.photo] : []),
@@ -161,7 +163,7 @@ app.post('/api/pins', async (req, res) => {
       date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
       time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
       location: req.body.address || 'Unknown Location',
-      status: 'pending-approval',
+      status: 'unresolved',
       photo: req.body.photo || null,
       photos: req.body.photos || (req.body.photo ? [req.body.photo] : []),
       radius: req.body.radius ? Number(req.body.radius) : undefined,
@@ -564,7 +566,7 @@ app.put('/api/accounts/profile', async (req, res) => {
 // Admin creates authority/LGU accounts
 app.post('/api/accounts/create-authority', async (req, res) => {
   try {
-    const { adminUsername, username, displayName, password, role, governmentCategory } = req.body;
+    const { adminUsername, username, displayName, password, role, governmentCategory, municipality } = req.body;
 
     // Check if requester is admin
     const requester = await db.collection('accounts').findOne({ username: adminUsername, role: 'admin' });
@@ -588,6 +590,7 @@ app.post('/api/accounts/create-authority', async (req, res) => {
       password: password || '123456',
       role: role,
       governmentCategory: governmentCategory || 'LGU',
+      municipality: municipality || '',
       isVerified: true,
       verificationStatus: 'verified',
       createdAt: new Date(),
@@ -637,7 +640,7 @@ app.put('/api/pins/:id/status', async (req, res) => {
       return res.status(200).json({ error: "Access denied. Only authorities or LGU responders can change status." });
     }
 
-    if (!['pending-approval', 'pending-resolution', 'resolved', 'pending', 'acknowledged', 'in-progress'].includes(status)) {
+    if (!['unresolved', 'pending-approval', 'pending-resolution', 'resolved', 'pending', 'acknowledged', 'in-progress'].includes(status)) {
       return res.status(200).json({ error: "Invalid status value" });
     }
 
@@ -652,6 +655,53 @@ app.put('/api/pins/:id/status', async (req, res) => {
     await db.collection('reports').updateMany(
       { pinId: new ObjectId(id) },
       { $set: { status } }
+    );
+
+    res.json({ ...pin, id: pin._id.toString() });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Update pin category (Authority/LGU responder role feature)
+app.put('/api/pins/:id/category', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { category, username } = req.body;
+    
+    // Verify user is authority/LGU/admin
+    const user = await db.collection('accounts').findOne({ username });
+    if (!user || !['authority', 'lgu', 'admin'].includes(user.role)) {
+      return res.status(200).json({ error: "Access denied. Only authorities or LGU responders can change tags." });
+    }
+
+    // Map category keys to their display names
+    const CATEGORIES = {
+      'flood': 'Flood',
+      'road-damage': 'Road Damage',
+      'peace-and-order': 'Peace and Order',
+      'utility-outages': 'Utility Outages',
+      'waste-collection': 'Waste Collection',
+      'infrastructure': 'Infrastructure & Public Works',
+      'fire': 'Fire',
+      'other': 'Other',
+    };
+
+    if (!CATEGORIES[category]) {
+      return res.status(400).json({ error: "Invalid category value" });
+    }
+
+    const pin = await db.collection('pins').findOneAndUpdate(
+      { _id: new ObjectId(id) },
+      { $set: { type: category, title: CATEGORIES[category] } },
+      { returnDocument: 'after' }
+    );
+    if (!pin) return res.status(404).json({ error: "Pin not found" });
+
+    // Also update corresponding reports collection type
+    await db.collection('reports').updateMany(
+      { pinId: new ObjectId(id) },
+      { $set: { typeKey: category, typeName: CATEGORIES[category] } }
     );
 
     res.json({ ...pin, id: pin._id.toString() });
@@ -931,7 +981,7 @@ app.delete('/api/accounts/:id', async (req, res) => {
 app.put('/api/accounts/:id/admin-edit', async (req, res) => {
   try {
     const { id } = req.params;
-    const { adminUsername, displayName, password, governmentCategory, role } = req.body;
+    const { adminUsername, displayName, password, governmentCategory, role, municipality } = req.body;
 
     // Verify requester is admin
     const requester = await db.collection('accounts').findOne({ username: adminUsername, role: 'admin' });
@@ -944,6 +994,7 @@ app.put('/api/accounts/:id/admin-edit', async (req, res) => {
     if (password !== undefined && password.trim() !== '') updateData.password = password.trim();
     if (governmentCategory !== undefined) updateData.governmentCategory = governmentCategory;
     if (role !== undefined) updateData.role = role;
+    if (municipality !== undefined) updateData.municipality = municipality;
 
     const result = await db.collection('accounts').findOneAndUpdate(
       { _id: new ObjectId(id) },

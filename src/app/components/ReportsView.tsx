@@ -12,29 +12,31 @@ interface Props {
   onEditReport: (report: UserReport) => void;
   onDeleteReport: (report: UserReport) => void;
   onBack: () => void;
+  onStatusChange?: (pinId: string, newStatus: string) => void;
+  onCategoryChange?: (pinId: string, newCategory: string) => void;
 }
 
 function StatusBadge({ status }: { status: string }) {
   const labelMap: Record<string, string> = {
-    'pending-approval': 'Pending Approval',
+    unresolved: 'Unresolved',
     'pending-resolution': 'Pending Resolution',
     resolved: 'Resolved',
-    pending: 'Pending Approval',
+    pending: 'Unresolved',
     'in-progress': 'Pending Resolution',
     acknowledged: 'Pending Resolution',
   };
 
   const colorMap: Record<string, { bg: string; text: string; border: string }> = {
-    'pending-approval': { bg: '#f3f4f6', text: '#4b5563', border: '#e5e7eb' },
+    unresolved: { bg: '#fee2e2', text: '#b91c1c', border: '#fca5a5' },
     'pending-resolution': { bg: '#fff7ed', text: '#ea580c', border: '#fed7aa' },
     resolved: { bg: '#f0fdf4', text: '#16a34a', border: '#bbf7d0' },
-    pending: { bg: '#f3f4f6', text: '#4b5563', border: '#e5e7eb' },
+    pending: { bg: '#fee2e2', text: '#b91c1c', border: '#fca5a5' },
     'in-progress': { bg: '#fff7ed', text: '#ea580c', border: '#fed7aa' },
     acknowledged: { bg: '#fff7ed', text: '#ea580c', border: '#fed7aa' },
   };
 
-  const displayStatus = labelMap[status] || 'Pending Approval';
-  const colors = colorMap[status] || colorMap['pending-approval'];
+  const displayStatus = labelMap[status] || 'Unresolved';
+  const colors = colorMap[status] || colorMap['unresolved'];
 
   return (
     <span
@@ -51,11 +53,15 @@ function ReportCard({
   currentUser,
   onEdit,
   onDelete,
+  onStatusChange,
+  onCategoryChange,
 }: {
-  report: UserReport & { reportedBy?: string };
+  report: UserReport & { reportedBy?: string; pinId?: string; type?: string };
   currentUser: UserProfile;
   onEdit: () => void;
   onDelete: () => void;
+  onStatusChange?: (pinId: string, newStatus: string) => void;
+  onCategoryChange?: (pinId: string, newCategory: string) => void;
 }) {
   const title = report.title || report.typeName;
   const desc = report.description || report.moreDetails;
@@ -66,6 +72,22 @@ function ReportCard({
   const isOwner = !report.reportedBy || report.reportedBy === currentUser.username;
   const canEdit = isOwner && currentUser.role !== 'admin';
   const canDelete = isOwner || currentUser.role === 'admin';
+  const isResponderRole = ['admin', 'authority', 'lgu'].includes(currentUser.role || '');
+
+  const CATEGORIES: Record<string, string> = {
+    'flood': 'Flood',
+    'road-damage': 'Road Damage',
+    'peace-and-order': 'Peace and Order',
+    'utility-outages': 'Utility Outages',
+    'waste-collection': 'Waste Collection',
+    'infrastructure': 'Infrastructure & Public Works',
+    'fire': 'Fire',
+    'other': 'Other',
+  };
+
+  const safeStatus = (report.status === 'pending' || report.status === 'pending-approval') ? 'unresolved' :
+                     (report.status === 'acknowledged' || report.status === 'in-progress') ? 'pending-resolution' :
+                     report.status;
 
   return (
     <div className="flex items-center gap-3.5 rounded-2xl px-3.5 py-3 mb-3 bg-white border border-gray-100 shadow-sm">
@@ -81,8 +103,38 @@ function ReportCard({
         {/* Title + Status + Actions */}
         <div className="flex items-start justify-between gap-1 mb-0.5">
           <div className="flex-1 min-w-0 flex items-center gap-2">
-            <p className="text-[14px] font-bold text-gray-900 truncate leading-tight">{title}</p>
-            <StatusBadge status={report.status} />
+            {isResponderRole && onCategoryChange ? (
+              <select
+                value={report.typeKey || report.type || 'other'}
+                onChange={(e) => onCategoryChange(report.pinId || report.id, e.target.value)}
+                className="text-[14px] font-bold text-gray-900 bg-transparent border-b border-dashed border-gray-300 focus:border-blue-500 outline-none cursor-pointer p-0 pr-4"
+              >
+                {Object.entries(CATEGORIES).map(([key, label]) => (
+                  <option key={key} value={key}>{label}</option>
+                ))}
+              </select>
+            ) : (
+              <p className="text-[14px] font-bold text-gray-900 truncate leading-tight">{title}</p>
+            )}
+
+            {isResponderRole && onStatusChange ? (
+              <select
+                value={safeStatus}
+                onChange={(e) => onStatusChange(report.pinId || report.id, e.target.value)}
+                className="flex-shrink-0 text-[10px] font-bold rounded-full px-2 py-0.5 border cursor-pointer outline-none bg-transparent"
+                style={{
+                   background: safeStatus === 'unresolved' ? '#fee2e2' : safeStatus === 'pending-resolution' ? '#fff7ed' : '#f0fdf4',
+                   color: safeStatus === 'unresolved' ? '#b91c1c' : safeStatus === 'pending-resolution' ? '#ea580c' : '#16a34a',
+                   borderColor: safeStatus === 'unresolved' ? '#fca5a5' : safeStatus === 'pending-resolution' ? '#fed7aa' : '#bbf7d0'
+                }}
+              >
+                <option value="unresolved" className="text-red-700 font-bold bg-white">Unresolved</option>
+                <option value="pending-resolution" className="text-amber-600 font-bold bg-white">Pending Resolution</option>
+                <option value="resolved" className="text-green-600 font-bold bg-white">Resolved</option>
+              </select>
+            ) : (
+              <StatusBadge status={report.status} />
+            )}
           </div>
           <div className="flex items-center flex-shrink-0 gap-1">
             {canEdit && (
@@ -132,6 +184,8 @@ export function ReportsView({
   onEditReport,
   onDeleteReport,
   onBack,
+  onStatusChange,
+  onCategoryChange,
 }: Props) {
   const isAdmin = currentUser?.role === 'admin';
   const isResponder = currentUser?.role === 'lgu' || currentUser?.role === 'authority';
@@ -176,7 +230,7 @@ export function ReportsView({
   const stats = {
     total: summaryPins.length,
     resolved: summaryPins.filter(p => p.status === 'resolved').length,
-    pending: summaryPins.filter(p => !p.status || p.status === 'pending').length,
+    unresolved: summaryPins.filter(p => p.status === 'unresolved' || p.status === 'pending').length,
     inProgress: summaryPins.filter(p => p.status === 'in-progress' || p.status === 'acknowledged').length,
   };
 
@@ -230,6 +284,8 @@ export function ReportsView({
                 currentUser={currentUser}
                 onEdit={() => onEditReport(r)}
                 onDelete={() => onDeleteReport(r)}
+                onStatusChange={onStatusChange}
+                onCategoryChange={onCategoryChange}
               />
             ))
           )
@@ -260,10 +316,10 @@ export function ReportsView({
                     <p className="text-[20px] font-black text-[#16a34a] leading-none">{stats.resolved}</p>
                     <p className="text-[10px] font-extrabold text-[#15803d] uppercase mt-1">Resolved</p>
                   </div>
-                  <div className="bg-[#f3f4f6] p-4 rounded-2xl border border-[#e5e7eb] shadow-sm text-center">
-                    <Clock size={20} className="mx-auto text-[#4b5563] mb-1 opacity-80" />
-                    <p className="text-[20px] font-black text-[#4b5563] leading-none">{stats.pending}</p>
-                    <p className="text-[10px] font-extrabold text-[#374151] uppercase mt-1">Pending</p>
+                  <div className="bg-[#fee2e2] p-4 rounded-2xl border border-[#fca5a5] shadow-sm text-center">
+                    <Clock size={20} className="mx-auto text-[#b91c1c] mb-1 opacity-80" />
+                    <p className="text-[20px] font-black text-[#b91c1c] leading-none">{stats.unresolved}</p>
+                    <p className="text-[10px] font-extrabold text-[#991b1b] uppercase mt-1">Unresolved</p>
                   </div>
                   <div className="bg-[#fff7ed] p-4 rounded-2xl border border-[#fed7aa] shadow-sm text-center">
                     <RefreshCw size={20} className="mx-auto text-[#ea580c] mb-1 opacity-80" />
