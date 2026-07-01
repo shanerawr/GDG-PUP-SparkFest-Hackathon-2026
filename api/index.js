@@ -4,10 +4,7 @@ import dotenv from 'dotenv';
 import { MongoClient, ObjectId } from 'mongodb';
 import dns from 'dns';
 
-// Only force DNS in local development, not in Vercel's serverless environment
-if (!process.env.VERCEL) {
-  dns.setServers(['8.8.8.8', '1.1.1.1']);
-}
+
 
 dotenv.config();
 
@@ -42,7 +39,7 @@ async function connectDB() {
   }
 
   if (!client) {
-    client = new MongoClient(MONGODB_URI);
+    client = new MongoClient(MONGODB_URI, { serverSelectionTimeoutMS: 5000 });
   }
 
   try {
@@ -98,11 +95,9 @@ function inferMunicipalityJS(addressInput) {
 
 // Seed helper function
 async function seedDatabase() {
-
-  // Seed default admin account
-  const adminExists = await db.collection('accounts').findOne({ username: 'admin' });
-  if (!adminExists) {
-    await db.collection('accounts').insertOne({
+  // Seed default admin and citizen accounts
+  const seedAccounts = [
+    {
       username: 'admin',
       displayName: 'System Admin',
       password: 'admin',
@@ -113,14 +108,179 @@ async function seedDatabase() {
       reportsCount: 0,
       upvotesCount: 0,
       joinedDate: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
-      notifSettings: {
-        pushEnabled: true,
-        newPinNearby: true,
-        replyReceived: true,
-        upvotesOnPost: true
+      notifSettings: { pushEnabled: true, newPinNearby: true, replyReceived: true, upvotesOnPost: true }
+    },
+    {
+      username: 'juandelacruz',
+      displayName: 'Juan dela Cruz',
+      password: 'juandelacruz',
+      role: 'citizen',
+      isVerified: true,
+      verificationStatus: 'verified',
+      createdAt: new Date(),
+      reportsCount: 1,
+      upvotesCount: 35,
+      joinedDate: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+      notifSettings: { pushEnabled: true, newPinNearby: true, replyReceived: true, upvotesOnPost: true }
+    },
+    {
+      username: 'testcitizen',
+      displayName: 'Test Citizen',
+      password: 'Testcitizen123',
+      role: 'citizen',
+      isVerified: false,
+      verificationStatus: 'pending',
+      createdAt: new Date(),
+      reportsCount: 0,
+      upvotesCount: 0,
+      joinedDate: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+      notifSettings: { pushEnabled: true, newPinNearby: true, replyReceived: true, upvotesOnPost: true }
+    },
+    {
+      username: 'bfp-malabon',
+      displayName: 'BFP Malabon',
+      password: 'bfp-malabon',
+      role: 'authority',
+      governmentCategory: 'BFP',
+      municipality: 'Malabon',
+      isVerified: true,
+      verificationStatus: 'verified',
+      createdAt: new Date(),
+      reportsCount: 0,
+      upvotesCount: 0,
+      joinedDate: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+      notifSettings: { pushEnabled: true, newPinNearby: true, replyReceived: true, upvotesOnPost: true }
+    }
+  ];
+
+  for (const acc of seedAccounts) {
+    const exists = await db.collection('accounts').findOne({ username: acc.username });
+    if (!exists) {
+      await db.collection('accounts').insertOne(acc);
+      console.log(`Seeded initial account @${acc.username}`);
+    }
+  }
+
+  // Seed default pins & reports
+  const hasSeededPins = await db.collection('reports').findOne({ reportedBy: 'testcitizen' });
+  if (!hasSeededPins) {
+    await db.collection('pins').deleteMany({});
+    await db.collection('reports').deleteMany({});
+    const initialPins = [
+      {
+        type: 'flood', hazardLevel: 'life-threatening',
+        lat: 14.6299, lng: 120.9719,
+        title: 'Baha sa Tondo Market',
+        address: 'Tondo, Manila',
+        reportedBy: 'testcitizen', timeAgo: '5 mins ago',
+        upvotes: 24,
+        description: 'Knee-deep floodwater near the public market. Road is completely impassable. Avoid this area.',
+        status: 'unresolved', threadCount: 7,
+        createdAt: new Date()
+      },
+      {
+        type: 'infrastructure', hazardLevel: 'needs-attention',
+        lat: 14.5794, lng: 120.9961,
+        title: 'Road construction at Quirino Ave',
+        address: 'Paco, Manila',
+        reportedBy: 'maryreyes', timeAgo: '23 mins ago',
+        upvotes: 12,
+        description: 'Ongoing road works causing single-lane traffic. Expect 20–30 minute delays.',
+        status: 'pending-resolution', threadCount: 3,
+        createdAt: new Date()
+      },
+      {
+        type: 'utility-outages', hazardLevel: 'urgent',
+        lat: 14.5786, lng: 120.9822,
+        title: 'Natumbang Poste, Ermita',
+        address: 'Ermita, Manila',
+        reportedBy: 'juandelacruz', timeAgo: '41 mins ago',
+        upvotes: 35,
+        description: "Electric pole down after last night's storm. Live wires on road. DANGER! Keep away.",
+        status: 'pending-resolution', threadCount: 12,
+        createdAt: new Date()
       }
-    });
-    console.log("Seeded initial admin account");
+    ];
+    const pinResults = await db.collection('pins').insertMany(initialPins);
+    console.log("Seeded initial pins data");
+
+    const reportsCount = await db.collection('reports').countDocuments();
+    if (reportsCount === 0) {
+      const pinIds = Object.values(pinResults.insertedIds);
+      const initialReports = [
+        {
+          typeName: 'Flood', typeKey: 'flood',
+          moreDetails: 'Knee-deep near Tondo Market',
+          date: 'June 30, 2026', time: '02:25 AM',
+          location: 'Tondo, Manila',
+          status: 'unresolved',
+          reportedBy: 'testcitizen',
+          pinId: pinIds[0],
+          createdAt: new Date()
+        },
+        {
+          typeName: 'Infrastructure & Public Works', typeKey: 'infrastructure',
+          moreDetails: 'Road construction at Quirino Ave',
+          date: 'June 30, 2026', time: '04:12 AM',
+          location: 'Paco, Manila',
+          status: 'pending-resolution',
+          reportedBy: 'maryreyes',
+          pinId: pinIds[1],
+          createdAt: new Date()
+        },
+        {
+          typeName: 'Utility Outages', typeKey: 'utility-outages',
+          moreDetails: 'Natumbang Poste blocking Ermita St.',
+          date: 'June 30, 2026', time: '05:05 AM',
+          location: 'Ermita, Manila',
+          status: 'pending-resolution',
+          reportedBy: 'juandelacruz',
+          pinId: pinIds[2],
+          createdAt: new Date()
+        }
+      ];
+      await db.collection('reports').insertMany(initialReports);
+      console.log("Seeded initial reports data");
+    }
+  }
+
+  // Seed default notifications
+  const notificationsCount = await db.collection('notifications').countDocuments();
+  if (notificationsCount === 0) {
+    const initialNotifications = [
+      {
+        targetUser: 'juandelacruz',
+        type: 'new-report',
+        isNew: true,
+        title: 'Flood reported at Tondo Market',
+        subtitle: 'Tondo, Manila',
+        detail: 'Knee-deep floodwater near the public market entrance. Passable with care.',
+        timeAgo: '7 mins ago',
+        createdAt: new Date(Date.now() - 7 * 60 * 1000)
+      },
+      {
+        targetUser: 'juandelacruz',
+        type: 'reply',
+        isNew: true,
+        title: 'maryreyes replied to your comment',
+        subtitle: 'Natumbang Poste, Ermita',
+        detail: 'BFP is already on the way to clear the wires.',
+        timeAgo: '15 mins ago',
+        createdAt: new Date(Date.now() - 15 * 60 * 1000)
+      },
+      {
+        targetUser: 'juandelacruz',
+        type: 'upvote',
+        isNew: false,
+        title: '24 upvotes on your report',
+        subtitle: 'Natumbang Poste, Ermita',
+        detail: 'Your report has received 24 upvotes from the community.',
+        timeAgo: '1 hr ago',
+        createdAt: new Date(Date.now() - 60 * 60 * 1000)
+      }
+    ];
+    await db.collection('notifications').insertMany(initialNotifications);
+    console.log("Seeded initial notifications data");
   }
 
   // Migrate database statuses and clean up old complaint tags
