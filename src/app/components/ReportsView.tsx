@@ -56,6 +56,7 @@ function ReportCard({
   onDelete,
   onStatusChange,
   onCategoryChange,
+  onVerificationChange,
 }: {
   report: UserReport & { reportedBy?: string; pinId?: string; type?: string };
   currentUser: UserProfile;
