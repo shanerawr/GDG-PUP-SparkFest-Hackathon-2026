@@ -221,31 +221,58 @@ export function VerificationView({ currentUser, onBack }: Props) {
                 </div>
               </div>
 
-              {/* Simulated ID visualization card */}
-              <div className="relative border border-slate-200 rounded-2xl p-4 bg-slate-900 overflow-hidden text-white flex flex-col justify-between min-h-[140px] shadow-sm select-none">
-                <Shield className="absolute right-[-20px] bottom-[-20px] w-36 h-36 opacity-[0.04] text-white rotate-12" />
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="text-[10px] uppercase tracking-widest text-[#47B3E8] font-black">REPUBLIC OF THE PHILIPPINES</p>
-                    <p className="text-[7.5px] uppercase tracking-wider text-gray-400 font-semibold mt-0.5">BANTAYBAYAN CIVILIAN VERIFIED IDENTITY</p>
-                  </div>
-                  <Shield size={18} className="text-[#47B3E8]" />
+              {/* Submitted Document Section (Top) */}
+              <div className="space-y-1.5">
+                <span className="block text-[11px] font-extrabold text-gray-400 uppercase tracking-wider">Submitted Document Photo</span>
+                <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-sm flex flex-col items-center justify-center p-3 min-h-[140px]">
+                  {selectedUser.idPhoto ? (
+                    <img 
+                      src={selectedUser.idPhoto} 
+                      alt="Submitted Government ID" 
+                      className="w-full max-h-[180px] object-contain rounded-xl"
+                    />
+                  ) : (
+                    /* Fallback Mock Document */
+                    <div className="w-full bg-blue-50/50 border border-blue-100 rounded-xl p-4 flex flex-col items-center justify-center text-center space-y-2 select-none">
+                      <Shield size={28} className="text-blue-500" />
+                      <div>
+                        <p className="text-[12px] font-bold text-blue-900 uppercase">National ID Scan Fallback</p>
+                        <p className="text-[10px] text-blue-600 mt-0.5 font-semibold">Mock Document Submitted for @{selectedUser.username}</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
+              </div>
 
-                <div className="mt-4 flex gap-3 items-center">
-                  <div className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-[10px] font-black text-white flex-shrink-0">
-                    {selectedUser.displayName.slice(0, 2).toUpperCase()}
+              {/* Scanned/Extracted Card Section (Under) */}
+              <div className="space-y-1.5">
+                <span className="block text-[11px] font-extrabold text-gray-400 uppercase tracking-wider">Scanned / Extracted Identity (OCR)</span>
+                {/* Simulated ID visualization card */}
+                <div className="relative border border-slate-200 rounded-2xl p-4 bg-slate-900 overflow-hidden text-white flex flex-col justify-between min-h-[140px] shadow-sm select-none">
+                  <Shield className="absolute right-[-20px] bottom-[-20px] w-36 h-36 opacity-[0.04] text-white rotate-12" />
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-[10px] uppercase tracking-widest text-[#47B3E8] font-black">REPUBLIC OF THE PHILIPPINES</p>
+                      <p className="text-[7.5px] uppercase tracking-wider text-gray-400 font-semibold mt-0.5">BANTAYBAYAN CIVILIAN VERIFIED IDENTITY</p>
+                    </div>
+                    <Shield size={18} className="text-[#47B3E8]" />
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[11px] font-bold truncate leading-tight uppercase">{selectedUser.displayName}</p>
-                    <p className="text-[8.5px] text-gray-400 font-medium">@{selectedUser.username}</p>
-                    <p className="text-[8.5px] text-[#47B3E8] font-bold mt-0.5">{selectedUser.municipality || 'PH RESIDENT'}</p>
-                  </div>
-                </div>
 
-                <div className="flex justify-between items-end mt-4 pt-1.5 border-t border-slate-800 text-[7px] text-gray-500 font-mono font-semibold uppercase">
-                  <span>ID NO: BB-VERIFY-{selectedUser.username.slice(0, 6).toUpperCase()}</span>
-                  <span>STATUS: PENDING</span>
+                  <div className="mt-4 flex gap-3 items-center">
+                    <div className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-[10px] font-black text-white flex-shrink-0">
+                      {selectedUser.displayName.slice(0, 2).toUpperCase()}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[11px] font-bold truncate leading-tight uppercase">{selectedUser.displayName}</p>
+                      <p className="text-[8.5px] text-gray-400 font-medium">@{selectedUser.username}</p>
+                      <p className="text-[8.5px] text-[#47B3E8] font-bold mt-0.5">{selectedUser.municipality || 'PH RESIDENT'}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-end mt-4 pt-1.5 border-t border-slate-800 text-[7px] text-gray-500 font-mono font-semibold uppercase">
+                    <span>ID NO: BB-VERIFY-{selectedUser.username.slice(0, 6).toUpperCase()}</span>
+                    <span>STATUS: PENDING</span>
+                  </div>
                 </div>
               </div>
             </div>

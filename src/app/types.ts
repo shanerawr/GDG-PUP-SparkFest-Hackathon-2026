@@ -41,6 +41,7 @@ export interface UserProfile {
   username: string;
   displayName: string;
   avatarUrl?: string;
+  idPhoto?: string;
   isVerified: boolean;
   verificationStatus: 'unverified' | 'pending' | 'verified';
   reportsCount: number;

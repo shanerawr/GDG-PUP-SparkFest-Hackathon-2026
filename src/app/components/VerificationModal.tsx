@@ -18,6 +18,7 @@ export function VerificationModal({ user, onClose, onVerificationUpdate }: Props
   const [fileName, setFileName] = useState('');
   const [scanning, setScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
+  const [idPhoto, setIdPhoto] = useState<string | null>(null);
 
   // Auto scanning animation in step 2
   useEffect(() => {
@@ -49,8 +50,15 @@ export function VerificationModal({ user, onClose, onVerificationUpdate }: Props
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      setFileName(e.target.files[0].name);
+      const file = e.target.files[0];
+      setFileName(file.name);
       setFileSelected(true);
+      
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setIdPhoto(reader.result as string);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -64,6 +72,7 @@ export function VerificationModal({ user, onClose, onVerificationUpdate }: Props
       ...user,
       verificationStatus: 'pending' as const,
       isVerified: false,
+      idPhoto: idPhoto || undefined,
     };
     
     // Save pending state on backend

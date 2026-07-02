@@ -779,7 +779,7 @@ app.post('/api/accounts/profile', async (req, res) => {
 // Update profile details
 app.put('/api/accounts/profile', async (req, res) => {
   try {
-    const { id, displayName, avatarUrl, notifSettings, verificationStatus, isVerified, password, municipality } = req.body;
+    const { id, displayName, avatarUrl, notifSettings, verificationStatus, isVerified, password, municipality, idPhoto } = req.body;
     if (!id) {
       return res.status(400).json({ error: "Missing account ID" });
     }
@@ -791,6 +791,7 @@ app.put('/api/accounts/profile', async (req, res) => {
     if (isVerified !== undefined) updateData.isVerified = isVerified;
     if (password !== undefined) updateData.password = password;
     if (municipality !== undefined) updateData.municipality = municipality;
+    if (idPhoto !== undefined) updateData.idPhoto = idPhoto;
 
     const result = await db.collection('accounts').findOneAndUpdate(
       { _id: new ObjectId(id) },
