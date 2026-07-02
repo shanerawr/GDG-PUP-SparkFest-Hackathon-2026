@@ -335,6 +335,23 @@ async function seedDatabase() {
     await db.collection('reports').updateMany({ status: 'in-progress' }, { $set: { status: 'pending-resolution' } });
     await db.collection('reports').updateMany({ status: 'acknowledged' }, { $set: { status: 'pending-resolution' } });
     console.log("Database statuses successfully migrated to unresolved and pending-resolution");
+
+    // Clean up duplicate notifications
+    const allNotifs = await db.collection('notifications').find({}).toArray();
+    const seenNotifs = new Set();
+    const notifIdsToDelete = [];
+    for (const notif of allNotifs) {
+      const key = `${notif.targetUser}_${notif.type}_${notif.title}_${notif.pinId || ''}`;
+      if (seenNotifs.has(key)) {
+        notifIdsToDelete.push(notif._id);
+      } else {
+        seenNotifs.add(key);
+      }
+    }
+    if (notifIdsToDelete.length > 0) {
+      await db.collection('notifications').deleteMany({ _id: { $in: notifIdsToDelete } });
+      console.log(`Database migration: Deduplicated and removed ${notifIdsToDelete.length} duplicate notifications.`);
+    }
   } catch (err) {
     console.error("Database migration error:", err);
   }

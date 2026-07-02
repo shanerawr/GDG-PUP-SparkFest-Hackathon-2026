@@ -237,6 +237,7 @@ export function AddReportModal({ onClose, onSubmit, initialData }: Props) {
   };
 
   const handleSubmit = () => {
+    if (submitted) return;
     if (!title.trim()) {
       alert('Please enter an incident name.');
       return;
