@@ -29,6 +29,7 @@ const CATEGORIES = [
 
 export default function App() {
   const [activePanel, setActivePanel] = useState<AppPanel>(null);
+  const [reportsInitialTab, setReportsInitialTab] = useState<'my-reports' | 'summary' | 'ai-trends'>('my-reports');
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [showVerification, setShowVerification] = useState(false);
   const [showAddReport, setShowAddReport] = useState(false);
@@ -183,16 +184,9 @@ export default function App() {
       if (!catMatch) return false;
 
       if (userMuni) {
-        const pinMuni = p.municipality || (p as any).municipality;
-        if (pinMuni) {
-          if (pinMuni.toLowerCase().trim() !== userMuni) {
-            return false;
-          }
-        } else {
-          const isBrgyRole = govCat === 'barangay' || currentUser?.role === 'barangay' || currentUser?.governmentCategory?.toLowerCase() === 'barangay';
-          const loc = `${p.address || ''} ${p.location || ''} ${p.description || ''} ${p.title || ''}`;
-          if (!matchMunicipality(userMuni, loc, isBrgyRole)) return false;
-        }
+        const isBrgyRole = govCat === 'barangay' || currentUser?.role === 'barangay' || currentUser?.governmentCategory?.toLowerCase() === 'barangay';
+        const loc = `${p.municipality || ''} ${p.address || ''} ${p.location || ''} ${p.description || ''} ${p.title || ''}`;
+        if (!matchMunicipality(userMuni, loc, isBrgyRole)) return false;
       }
       return true;
     });
@@ -200,12 +194,16 @@ export default function App() {
 
   const filteredReports = useMemo(() => {
     if (!currentUser) return userReports;
-    if (currentUser.role !== 'lgu') return userReports;
+    const isPrivileged = currentUser.role === 'admin' || currentUser.role === 'lgu' || currentUser.role === 'authority';
+    if (!isPrivileged || currentUser.role === 'admin') return userReports;
+
     const userMuni = currentUser.municipality?.toLowerCase().trim();
     if (!userMuni) return userReports;
+
+    const isBrgyRole = currentUser.role === 'barangay' || currentUser.governmentCategory?.toLowerCase() === 'barangay';
     return userReports.filter(r => {
-      const muni = r.municipality || inferMunicipalityFromAddress(r.location || r.address || '');
-      return muni?.toLowerCase().trim() === userMuni;
+      const loc = `${r.municipality || ''} ${r.location || ''} ${r.address || ''} ${r.description || ''} ${r.title || ''}`;
+      return matchMunicipality(userMuni, loc, isBrgyRole);
     });
   }, [userReports, currentUser]);
 
@@ -230,6 +228,7 @@ export default function App() {
   const unreadCount = notifications.filter(n => n.isNew).length;
 
   const handlePanelSelect = (panel: AppPanel) => {
+    if (panel === 'reports') setReportsInitialTab('my-reports');
     setActivePanel(panel);
   };
 
@@ -382,6 +381,11 @@ export default function App() {
               }}
               onClearActiveRoute={() => setActiveRoute(null)}
               theme={theme}
+              currentUser={currentUser}
+              onOpenAiTrends={() => {
+                setReportsInitialTab('ai-trends');
+                setActivePanel('reports');
+              }}
             />
           </div>
 
@@ -430,6 +434,7 @@ export default function App() {
               reports={filteredReports}
               allPins={pins}
               currentUser={currentUser}
+              initialTab={reportsInitialTab}
               onAddReport={handleAddReportClick}
               onEditReport={handleEditReportClick}
               onDeleteReport={handleDeleteReport}

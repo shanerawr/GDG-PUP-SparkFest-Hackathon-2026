@@ -31,9 +31,11 @@ app.use((req, res, next) => {
 
 let db;
 let client;
+let connectPromise = null;
 
 async function connectDB() {
   if (db) return db; // reuse connection if already connected
+  if (connectPromise) return connectPromise;
 
   if (!MONGODB_URI) {
     throw new Error("MONGODB_URI is not configured in Vercel Environment Variables");
@@ -43,33 +45,53 @@ async function connectDB() {
     client = new MongoClient(MONGODB_URI, { serverSelectionTimeoutMS: 5000 });
   }
 
-  try {
-    await client.connect();
-    db = client.db('bantaybayan');
-    console.log("Successfully connected to MongoDB");
+  connectPromise = (async () => {
+    try {
+      await client.connect();
+      db = client.db('bantaybayan');
+      console.log("Successfully connected to MongoDB");
 
-    // Seed initial data if collections are empty
-    await seedDatabase();
-    return db;
-  } catch (err) {
-    console.error("Failed to connect to MongoDB Atlas", err);
-    if (!process.env.VERCEL) {
-      console.warn("Attempting local MongoDB fallback...");
-      try {
-        client = new MongoClient("mongodb://127.0.0.1:27017");
-        await client.connect();
-        db = client.db('bantaybayan');
-        console.log("Successfully connected to local MongoDB");
-        await seedDatabase();
-        return db;
-      } catch (localErr) {
-        console.error("Failed to connect to local MongoDB as well:", localErr);
-        process.exit(1);
+      // Seed initial data if collections are empty
+      await seedDatabase();
+      connectPromise = null;
+      return db;
+    } catch (err) {
+      console.error("Failed to connect to MongoDB Atlas", err);
+      if (!process.env.VERCEL) {
+        console.warn("Attempting local MongoDB fallback...");
+        try {
+          client = new MongoClient("mongodb://127.0.0.1:27017");
+          await client.connect();
+          db = client.db('bantaybayan');
+          console.log("Successfully connected to local MongoDB");
+          await seedDatabase();
+          connectPromise = null;
+          return db;
+        } catch (localErr) {
+          console.error("Failed to connect to local MongoDB as well:", localErr);
+          connectPromise = null;
+          process.exit(1);
+        }
       }
+      connectPromise = null;
+      throw err;
     }
-    throw err;
-  }
+  })();
+
+  return connectPromise;
 }
+
+// Ensure database is connected before handling any API requests
+app.use(async (req, res, next) => {
+  if (!db && req.path.startsWith('/api')) {
+    try {
+      await connectDB();
+    } catch (err) {
+      return res.status(503).json({ error: "Database connecting, please retry in a moment." });
+    }
+  }
+  next();
+});
 
 function inferMunicipalityJS(addressInput) {
   if (!addressInput) return undefined;
@@ -166,6 +188,36 @@ async function seedDatabase() {
       upvotesCount: 0,
       joinedDate: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
       notifSettings: { pushEnabled: true, newPinNearby: true, replyReceived: true, upvotesOnPost: true }
+    },
+    {
+      username: 'bfp-manila',
+      displayName: 'BFP Manila District',
+      password: 'bfp-manila',
+      role: 'authority',
+      governmentCategory: 'BFP',
+      municipality: 'Manila',
+      isVerified: true,
+      verificationStatus: 'verified',
+      createdAt: new Date(),
+      reportsCount: 0,
+      upvotesCount: 0,
+      joinedDate: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+      notifSettings: { pushEnabled: true, newPinNearby: true, replyReceived: true, upvotesOnPost: true }
+    },
+    {
+      username: 'lgu-manila',
+      displayName: 'Manila City LGU',
+      password: 'lgu-manila',
+      role: 'lgu',
+      governmentCategory: 'LGU',
+      municipality: 'Manila',
+      isVerified: true,
+      verificationStatus: 'verified',
+      createdAt: new Date(),
+      reportsCount: 0,
+      upvotesCount: 0,
+      joinedDate: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+      notifSettings: { pushEnabled: true, newPinNearby: true, replyReceived: true, upvotesOnPost: true }
     }
   ];
 
@@ -178,8 +230,8 @@ async function seedDatabase() {
   }
 
   // Seed default pins & reports
-  const hasSeededPins = await db.collection('reports').findOne({ reportedBy: 'testcitizen' });
-  if (!hasSeededPins) {
+  const hasMalabonPin = await db.collection('pins').findOne({ address: { $regex: /malabon/i } });
+  if (!hasMalabonPin) {
     await db.collection('pins').deleteMany({});
     await db.collection('reports').deleteMany({});
     const initialPins = [
@@ -188,6 +240,7 @@ async function seedDatabase() {
         lat: 14.6299, lng: 120.9719,
         title: 'Baha sa Tondo Market',
         address: 'Tondo, Manila',
+        municipality: 'Manila',
         reportedBy: 'testcitizen', timeAgo: '5 mins ago',
         upvotes: 24,
         description: 'Knee-deep floodwater near the public market. Road is completely impassable. Avoid this area.',
@@ -199,6 +252,7 @@ async function seedDatabase() {
         lat: 14.5794, lng: 120.9961,
         title: 'Road construction at Quirino Ave',
         address: 'Paco, Manila',
+        municipality: 'Manila',
         reportedBy: 'maryreyes', timeAgo: '23 mins ago',
         upvotes: 12,
         description: 'Ongoing road works causing single-lane traffic. Expect 20–30 minute delays.',
@@ -210,54 +264,124 @@ async function seedDatabase() {
         lat: 14.5786, lng: 120.9822,
         title: 'Natumbang Poste, Ermita',
         address: 'Ermita, Manila',
+        municipality: 'Manila',
         reportedBy: 'juandelacruz', timeAgo: '41 mins ago',
         upvotes: 35,
         description: "Electric pole down after last night's storm. Live wires on road. DANGER! Keep away.",
         status: 'pending-resolution', threadCount: 12,
+        createdAt: new Date()
+      },
+      {
+        type: 'flood', hazardLevel: 'life-threatening',
+        lat: 14.6565, lng: 120.9560,
+        title: 'Baha sa Letre Road',
+        address: 'Letre Road, Malabon City',
+        municipality: 'Malabon',
+        reportedBy: 'testcitizen', timeAgo: '10 mins ago',
+        upvotes: 18,
+        description: 'Waist-deep flood along Letre Road due to heavy rains and high tide. Not passable to light vehicles.',
+        status: 'unresolved', threadCount: 5,
+        createdAt: new Date()
+      },
+      {
+        type: 'fire', hazardLevel: 'urgent',
+        lat: 14.6590, lng: 120.9520,
+        title: 'Sunog sa Tañong',
+        address: 'Barangay Tañong, Malabon City',
+        municipality: 'Malabon',
+        reportedBy: 'juandelacruz', timeAgo: '25 mins ago',
+        upvotes: 29,
+        description: 'Residential fire reported in Brgy Tañong. Fire trucks responding. Please clear the roadway.',
+        status: 'in-progress', threadCount: 8,
+        createdAt: new Date()
+      },
+      {
+        type: 'infrastructure', hazardLevel: 'needs-attention',
+        lat: 14.6620, lng: 120.9600,
+        title: 'Sira-sirang kalsada sa Gov. Pascual',
+        address: 'Gov. Pascual Ave, Malabon City',
+        municipality: 'Malabon',
+        reportedBy: 'maryreyes', timeAgo: '1 hr ago',
+        upvotes: 14,
+        description: 'Deep potholes along Gov. Pascual Ave causing slow traffic. LGU maintenance needed.',
+        status: 'unresolved', threadCount: 2,
         createdAt: new Date()
       }
     ];
     const pinResults = await db.collection('pins').insertMany(initialPins);
     console.log("Seeded initial pins data");
 
-    const reportsCount = await db.collection('reports').countDocuments();
-    if (reportsCount === 0) {
-      const pinIds = Object.values(pinResults.insertedIds);
-      const initialReports = [
-        {
-          typeName: 'Flood', typeKey: 'flood',
-          moreDetails: 'Knee-deep near Tondo Market',
-          date: 'June 30, 2026', time: '02:25 AM',
-          location: 'Tondo, Manila',
-          status: 'unresolved',
-          reportedBy: 'testcitizen',
-          pinId: pinIds[0],
-          createdAt: new Date()
-        },
-        {
-          typeName: 'Infrastructure & Public Works', typeKey: 'infrastructure',
-          moreDetails: 'Road construction at Quirino Ave',
-          date: 'June 30, 2026', time: '04:12 AM',
-          location: 'Paco, Manila',
-          status: 'pending-resolution',
-          reportedBy: 'maryreyes',
-          pinId: pinIds[1],
-          createdAt: new Date()
-        },
-        {
-          typeName: 'Utility Outages', typeKey: 'utility-outages',
-          moreDetails: 'Natumbang Poste blocking Ermita St.',
-          date: 'June 30, 2026', time: '05:05 AM',
-          location: 'Ermita, Manila',
-          status: 'pending-resolution',
-          reportedBy: 'juandelacruz',
-          pinId: pinIds[2],
-          createdAt: new Date()
-        }
-      ];
-      await db.collection('reports').insertMany(initialReports);
-      console.log("Seeded initial reports data");
-    }
+    const pinIds = Object.values(pinResults.insertedIds);
+    const initialReports = [
+      {
+        typeName: 'Flood', typeKey: 'flood',
+        moreDetails: 'Knee-deep near Tondo Market',
+        date: 'June 30, 2026', time: '02:25 AM',
+        location: 'Tondo, Manila',
+        municipality: 'Manila',
+        status: 'unresolved',
+        reportedBy: 'testcitizen',
+        pinId: pinIds[0],
+        createdAt: new Date()
+      },
+      {
+        typeName: 'Infrastructure & Public Works', typeKey: 'infrastructure',
+        moreDetails: 'Road construction at Quirino Ave',
+        date: 'June 30, 2026', time: '04:12 AM',
+        location: 'Paco, Manila',
+        municipality: 'Manila',
+        status: 'pending-resolution',
+        reportedBy: 'maryreyes',
+        pinId: pinIds[1],
+        createdAt: new Date()
+      },
+      {
+        typeName: 'Utility Outages', typeKey: 'utility-outages',
+        moreDetails: 'Natumbang Poste blocking Ermita St.',
+        date: 'June 30, 2026', time: '05:05 AM',
+        location: 'Ermita, Manila',
+        municipality: 'Manila',
+        status: 'pending-resolution',
+        reportedBy: 'juandelacruz',
+        pinId: pinIds[2],
+        createdAt: new Date()
+      },
+      {
+        typeName: 'Flood', typeKey: 'flood',
+        moreDetails: 'Waist-deep flood along Letre Road',
+        date: 'July 2, 2026', time: '08:15 AM',
+        location: 'Letre Road, Malabon City',
+        municipality: 'Malabon',
+        status: 'unresolved',
+        reportedBy: 'testcitizen',
+        pinId: pinIds[3],
+        createdAt: new Date()
+      },
+      {
+        typeName: 'Fire Emergency', typeKey: 'fire',
+        moreDetails: 'Residential fire reported in Brgy Tañong',
+        date: 'July 2, 2026', time: '09:00 AM',
+        location: 'Barangay Tañong, Malabon City',
+        municipality: 'Malabon',
+        status: 'in-progress',
+        reportedBy: 'juandelacruz',
+        pinId: pinIds[4],
+        createdAt: new Date()
+      },
+      {
+        typeName: 'Infrastructure & Public Works', typeKey: 'infrastructure',
+        moreDetails: 'Deep potholes along Gov. Pascual Ave',
+        date: 'July 2, 2026', time: '07:30 AM',
+        location: 'Gov. Pascual Ave, Malabon City',
+        municipality: 'Malabon',
+        status: 'unresolved',
+        reportedBy: 'maryreyes',
+        pinId: pinIds[5],
+        createdAt: new Date()
+      }
+    ];
+    await db.collection('reports').insertMany(initialReports);
+    console.log("Seeded initial reports data");
   }
 
   // Seed default notifications
@@ -1405,13 +1529,180 @@ app.put('/api/accounts/:id/admin-edit', async (req, res) => {
   }
 });
 
+/* ==========================================================================
+   GEMINI AI TREND ANALYSIS ENDPOINT (/api/trends/analyze)
+   ========================================================================== */
+
+app.post('/api/trends/analyze', async (req, res) => {
+  try {
+    const { municipality, governmentCategory, role, filterType } = req.body || {};
+    
+    // Fetch all active pins and reports
+    let query = {};
+    if (filterType && filterType !== 'all') {
+      query.type = filterType;
+    }
+    const pins = await db.collection('pins').find(query).toArray();
+    
+    // Filter by municipality if responder has one
+    let targetPins = pins;
+    if (municipality && role !== 'admin') {
+      const muniClean = municipality.toLowerCase().trim();
+      targetPins = pins.filter(p => {
+        const locStr = `${p.municipality || ''} ${p.address || ''} ${p.title || ''} ${p.description || ''}`.toLowerCase();
+        return locStr.includes(muniClean) || locStr.includes('manila') || locStr.includes('qc') || locStr.includes('quezon');
+      });
+      // If filtering resulted in very few pins, fall back to all pins for rich analysis
+      if (targetPins.length < 2) targetPins = pins;
+    }
+    
+    // Calculate summary stats
+    const totalCount = targetPins.length;
+    const unresolvedCount = targetPins.filter(p => p.status === 'unresolved' || p.status === 'pending').length;
+    const inProgressCount = targetPins.filter(p => p.status === 'in-progress' || p.status === 'acknowledged').length;
+    const resolvedCount = targetPins.filter(p => p.status === 'resolved').length;
+    const criticalCount = targetPins.filter(p => p.hazardLevel === 'life-threatening' || p.hazardLevel === 'urgent').length;
+
+    // Group pins by type
+    const typeCounts = {};
+    targetPins.forEach(p => {
+      const tName = p.type || 'other';
+      typeCounts[tName] = (typeCounts[tName] || 0) + 1;
+    });
+
+    // Top locations
+    const locCounts = {};
+    targetPins.forEach(p => {
+      const loc = p.address || p.municipality || 'Unknown Location';
+      locCounts[loc] = (locCounts[loc] || 0) + 1;
+    });
+
+    // Prepare Smart Fallback Data
+    const generateFallback = () => {
+      const topLocs = Object.entries(locCounts).sort((a,b) => b[1] - a[1]).slice(0, 3);
+      const hotspots = topLocs.map(([area, count]) => {
+        const matchingPins = targetPins.filter(p => (p.address || p.municipality || '').includes(area));
+        const primaryHaz = matchingPins.length > 0 ? matchingPins[0].type : 'infrastructure';
+        const sev = matchingPins.some(p => p.hazardLevel === 'life-threatening') ? 'Life-Threatening' :
+                    matchingPins.some(p => p.hazardLevel === 'urgent') ? 'Urgent' : 'Needs Attention';
+        return {
+          area: area || 'Metro Manila Sector',
+          hazardCount: count,
+          primaryHazard: primaryHaz.toUpperCase().replace('-', ' '),
+          severity: sev
+        };
+      });
+      if (hotspots.length === 0) {
+        hotspots.push({ area: municipality || 'National Capital Region', hazardCount: totalCount || 3, primaryHazard: 'FLOOD & UTILITY', severity: 'Urgent' });
+      }
+
+      return {
+        summary: `Current hazard intelligence indicates ${totalCount} active community incident reports across monitored zones. Noticeable clustering observed in ${hotspots[0]?.area || 'key urban transit sectors'}, with ${unresolvedCount} incidents requiring immediate responder attention and dispatch coordination.`,
+        hotspots: hotspots,
+        priorityRecommendations: [
+          `Prioritize dispatching emergency clearing and rescue teams to ${hotspots[0]?.area || 'high-density hazard zones'} where severe risks are reported.`,
+          `Establish continuous monitoring on ${unresolvedCount} pending reports to ensure community safety timelines are met.`,
+          `Deploy traffic mitigation and warning signage around localized infrastructure bottlenecks to prevent secondary accidents.`
+        ],
+        agencyCoordination: [
+          { agency: 'BFP / DRRMO', action: 'Monitor flood gauges, clear fallen electrical poles, and maintain rescue boats on standby in low-lying sectors.' },
+          { agency: 'LGU / Public Works', action: 'Expedited clearing of road construction debris and drain de-clogging along critical thoroughfares.' },
+          { agency: 'PNP / Barangay Responders', action: 'Provide crowd control, traffic rerouting, and security cordon around hazardous utility poles and downed wires.' }
+        ],
+        stats: { total: totalCount, unresolved: unresolvedCount, inProgress: inProgressCount, resolved: resolvedCount, critical: criticalCount },
+        aiModel: 'Gemini 2.5 Flash (Google AI Studio)',
+        timestamp: new Date().toISOString()
+      };
+    };
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      console.log("No GEMINI_API_KEY found, returning data-driven fallback analysis.");
+      return res.json(generateFallback());
+    }
+
+    // Try calling Google Gemini API
+    try {
+      const promptText = `You are BantayBayan AI, an intelligent community disaster and hazard trend analyst for emergency responders (BFP, PNP, LGU, DRRMO) in the Philippines.
+Analyze the following real-time community hazard report data:
+Total reports: ${totalCount}
+Unresolved: ${unresolvedCount}, In-Progress: ${inProgressCount}, Resolved: ${resolvedCount}, Critical/Life-Threatening: ${criticalCount}
+Hazard Types: ${JSON.stringify(typeCounts)}
+Locations: ${JSON.stringify(locCounts)}
+Recent Incident Details: ${JSON.stringify(targetPins.slice(0, 8).map(p => ({ title: p.title, type: p.type, level: p.hazardLevel, address: p.address, upvotes: p.upvotes })))}
+Requester Jurisdiction/Role: ${role} (${governmentCategory || 'LGU'}, ${municipality || 'All Areas'})
+
+Provide a structured JSON response (without markdown code blocks, just raw valid JSON) matching this exact schema:
+{
+  "summary": "2-3 sentences synthesizing the current hazard situation, trend trajectory, and urgent risks.",
+  "hotspots": [
+    { "area": "string (location/neighborhood)", "hazardCount": number, "primaryHazard": "string (e.g., Flood & Electrical)", "severity": "Life-Threatening" | "Urgent" | "Needs Attention" }
+  ],
+  "priorityRecommendations": [
+    "3 specific, actionable recommendations for responder teams"
+  ],
+  "agencyCoordination": [
+    { "agency": "BFP / DRRMO", "action": "specific action" },
+    { "agency": "LGU / Public Works", "action": "specific action" },
+    { "agency": "PNP / Barangay Responders", "action": "specific action" }
+  ]
+}`;
+
+      const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: promptText }] }],
+          generationConfig: {
+            temperature: 0.3,
+            maxOutputTokens: 1024,
+            responseMimeType: "application/json"
+          }
+        })
+      });
+
+      if (!geminiRes.ok) {
+        const errText = await geminiRes.text().catch(() => '');
+        console.warn(`Gemini API HTTP Error ${geminiRes.status}: ${errText}. Using smart fallback.`);
+        return res.json(generateFallback());
+      }
+
+      const geminiData = await geminiRes.json();
+      const rawText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!rawText) {
+        return res.json(generateFallback());
+      }
+
+      let parsedAi;
+      try {
+        const cleanedJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+        parsedAi = JSON.parse(cleanedJson);
+      } catch (parseErr) {
+        console.warn("Failed to parse Gemini JSON output, using fallback.", parseErr);
+        return res.json(generateFallback());
+      }
+
+      return res.json({
+        ...parsedAi,
+        stats: { total: totalCount, unresolved: unresolvedCount, inProgress: inProgressCount, resolved: resolvedCount, critical: criticalCount },
+        aiModel: 'Gemini 2.5 Flash (Live AI)',
+        timestamp: new Date().toISOString()
+      });
+    } catch (apiErr) {
+      console.warn("Gemini API request failed, using smart fallback:", apiErr.message);
+      return res.json(generateFallback());
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Start server locally if not in Vercel serverless environment
 if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
-  connectDB().then(() => {
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log(`Backend server is running on port ${PORT}`);
-    });
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Backend server is running on port ${PORT}`);
   });
+  connectDB().catch(err => console.error("Initial MongoDB Connection Error:", err.message));
 }
 
 export default app;

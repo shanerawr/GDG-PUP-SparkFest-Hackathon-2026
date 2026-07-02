@@ -1,7 +1,8 @@
-import { useState } from 'react';
-import { Plus, Pencil, Trash2, FileText, MapPin, MoreHorizontal, PieChart, CheckCircle, Clock, RefreshCw, Filter, ArrowUpDown, Eye } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Plus, Pencil, Trash2, FileText, MapPin, MoreHorizontal, PieChart, CheckCircle, Clock, RefreshCw, Filter, ArrowUpDown, Eye, Sparkles, List } from 'lucide-react';
 import { LandscapeThumb } from './LandscapeThumb';
 import { PanelHeader } from './PanelHeader';
+import { AiTrendAnalysisPanel } from './AiTrendAnalysisPanel';
 import { matchMunicipality } from '../utils/municipalityMatcher';
 import type { UserReport, UserProfile, MapPin as MapPinType } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -10,6 +11,7 @@ interface Props {
   reports: UserReport[];
   allPins?: MapPinType[];
   currentUser: UserProfile;
+  initialTab?: 'my-reports' | 'summary' | 'ai-trends';
   onAddReport: () => void;
   onEditReport: (report: UserReport) => void;
   onDeleteReport: (report: UserReport) => void;
@@ -224,6 +226,7 @@ export function ReportsView({
   reports,
   allPins = [],
   currentUser,
+  initialTab,
   onAddReport,
   onEditReport,
   onDeleteReport,
@@ -243,7 +246,11 @@ export function ReportsView({
     (currentUser?.username || '').toLowerCase().includes('drrmo') ? 'DRRMO' : 'LGU'
   ))?.toLowerCase();
 
-  const [activeTab, setActiveTab] = useState<'my-reports' | 'summary'>('my-reports');
+  const [activeTab, setActiveTab] = useState<'my-reports' | 'summary' | 'ai-trends'>(initialTab || 'my-reports');
+  useEffect(() => {
+    if (initialTab) setActiveTab(initialTab);
+  }, [initialTab]);
+
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('newest');
 
@@ -352,9 +359,30 @@ export function ReportsView({
         </div>
       )}
 
+      {/* Tabs for Responders / Admins */}
+      {(isResponder || isAdmin) && (
+        <div className="flex bg-[#F5F0C0] px-4 py-2 gap-2">
+          <button
+            onClick={() => setActiveTab('my-reports')}
+            className={`flex-1 py-2 rounded-xl text-[13px] font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${activeTab === 'my-reports' ? 'bg-[#47B3E8] text-white shadow-md' : 'bg-white/50 text-gray-500 hover:bg-white/80'}`}
+          >
+            <List size={14} /> {(t as any).aiTrends?.feedLabel || 'Incident Feed'}
+          </button>
+          <button
+            onClick={() => setActiveTab('ai-trends')}
+            className={`flex-1 py-2 rounded-xl text-[13px] font-extrabold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${activeTab === 'ai-trends' ? 'bg-gradient-to-r from-indigo-600 via-blue-600 to-purple-600 text-white shadow-lg shadow-indigo-500/25 scale-[1.02]' : 'bg-white/50 text-indigo-900 hover:bg-white/80'}`}
+          >
+            <Sparkles size={14} className={activeTab === 'ai-trends' ? 'text-amber-300 animate-pulse' : 'text-indigo-600'} />
+            <span>{(t as any).aiTrends?.tabLabel || 'AI Trend Analysis'}</span>
+          </button>
+        </div>
+      )}
+
       {/* List / Dashboard */}
       <div className="flex-1 overflow-y-auto px-4 pb-28">
-        {activeTab === 'my-reports' || isAdmin || isResponder ? (
+        {activeTab === 'ai-trends' ? (
+          <AiTrendAnalysisPanel currentUser={currentUser} />
+        ) : activeTab === 'my-reports' || (!isCitizen && activeTab !== 'ai-trends') ? (
           <>
             <div className="flex gap-2 mb-4 bg-white/40 p-2 rounded-xl backdrop-blur-sm border border-white/50 shadow-sm animate-in fade-in slide-in-from-top-2">
               <div className="flex-1 flex items-center bg-white rounded-lg px-2 border border-gray-100">

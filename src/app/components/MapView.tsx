@@ -20,6 +20,8 @@ interface Props {
   onOpenDetail: (pin: MapPin) => void;
   onClearActiveRoute?: () => void;
   theme?: 'light' | 'dark';
+  currentUser?: any;
+  onOpenAiTrends?: () => void;
 }
 
 /* ── Haversine helper for marker highlighting ── */
@@ -158,7 +160,7 @@ export const darkMapStyles = [
 ];
 
 /* ── Inner map component (rendered inside error boundary) ── */
-function MapInner({ pins, activeRoute, onOpenDetail, onClearActiveRoute, theme = 'light' }: Props) {
+function MapInner({ pins, activeRoute, onOpenDetail, onClearActiveRoute, theme = 'light', currentUser, onOpenAiTrends }: Props) {
   const { t } = useLanguage();
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
@@ -458,6 +460,28 @@ function MapInner({ pins, activeRoute, onOpenDetail, onClearActiveRoute, theme =
           </button>
         )}
       </div>
+
+      {currentUser && (currentUser.role === 'admin' || currentUser.role === 'lgu' || currentUser.role === 'authority') && onOpenAiTrends && (
+        <div className="absolute top-16 left-0 right-0 z-[1000] flex justify-center pointer-events-none px-3">
+          <button
+            onClick={onOpenAiTrends}
+            className="pointer-events-auto flex items-center gap-2 px-4 py-2 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 text-white shadow-xl hover:shadow-indigo-500/25 border border-indigo-400/40 hover:scale-105 active:scale-95 transition-all cursor-pointer group animate-bounce"
+            style={{ animationDuration: '3s' }}
+          >
+            <span className="w-6 h-6 rounded-xl bg-gradient-to-tr from-blue-500 to-indigo-600 flex items-center justify-center shadow-md group-hover:rotate-12 transition-transform">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FDE047" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="animate-pulse">
+                <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
+              </svg>
+            </span>
+            <span className="text-[12px] font-black tracking-wide bg-gradient-to-r from-white via-indigo-100 to-blue-200 bg-clip-text text-transparent">
+              ✨ Gemini AI Trend Insights
+            </span>
+            <span className="text-[10px] bg-blue-500/20 text-blue-300 border border-blue-400/30 px-2 py-0.5 rounded-full font-extrabold uppercase tracking-wider">
+              Live
+            </span>
+          </button>
+        </div>
+      )}
 
       <button onClick={handleLocate}
         className="absolute right-3 bottom-3 z-[1000] w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center text-gray-600 hover:bg-gray-50 active:scale-95 transition-transform cursor-pointer"

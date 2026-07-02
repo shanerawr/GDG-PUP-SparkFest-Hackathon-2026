@@ -204,6 +204,30 @@ export const translations = {
       edit: 'Edit',
       back: 'Back',
       submit: 'Submit'
+    },
+    aiTrends: {
+      tabLabel: 'AI Trend Analysis',
+      feedLabel: 'Incident Feed',
+      title: 'Gemini AI Hazard Intelligence',
+      subtitle: 'Real-time incident pattern recognition & dispatch recommendations',
+      refresh: 'Refresh AI Insights',
+      refreshing: 'Analyzing Data...',
+      summaryTitle: 'Executive Hazard Synthesis',
+      hotspotsTitle: 'Critical Incident Hotspots',
+      hotspotArea: 'Sector / Area',
+      hazardCount: 'Active Hazards',
+      primaryHazard: 'Primary Threat',
+      severity: 'Risk Level',
+      recommendationsTitle: 'Priority Action Plan',
+      coordinationTitle: 'Multi-Agency Dispatch Matrix',
+      agency: 'Agency / Unit',
+      recommendedAction: 'Recommended Field Action',
+      filterAll: 'All Hazards',
+      filterFloodFire: 'Flood & Fire (DRRMO / BFP)',
+      filterInfra: 'Infrastructure (LGU)',
+      filterPeace: 'Peace & Order (PNP)',
+      modelInfo: 'Intelligence powered by Google Gemini',
+      noData: 'No active hazards found to analyze in this sector.'
     }
   },
   fil: {
@@ -411,6 +435,30 @@ export const translations = {
       edit: 'I-edit',
       back: 'Bumalik',
       submit: 'Isumite'
+    },
+    aiTrends: {
+      tabLabel: 'AI Pagsusuri ng Trend',
+      feedLabel: 'Listahan ng Ulat',
+      title: 'Gemini AI Hazard Intelligence',
+      subtitle: 'Real-time na pagsusuri ng panganib at rekomendasyon sa pagtugon',
+      refresh: 'I-refresh ang AI Insights',
+      refreshing: 'Sinusuri ang Data...',
+      summaryTitle: 'Buod ng Kalagayan sa Komunidad',
+      hotspotsTitle: 'Mga Kritikal na Hotspot',
+      hotspotArea: 'Sektor / Lugar',
+      hazardCount: 'Aktibong Panganib',
+      primaryHazard: 'Pangunahing Banta',
+      severity: 'Antas ng Panganib',
+      recommendationsTitle: 'Talaan ng Pangunahing Aksyon',
+      coordinationTitle: 'Matriks ng Kooperasyon ng mga Ahensya',
+      agency: 'Ahensya / Yunit',
+      recommendedAction: 'Inirerekomendang Hakbang',
+      filterAll: 'Lahat ng Panganib',
+      filterFloodFire: 'Baha at Sunog (DRRMO / BFP)',
+      filterInfra: 'Imprastraktura (LGU)',
+      filterPeace: 'Kaayusan at Kapayapaan (PNP)',
+      modelInfo: 'Pinapagana ng Google Gemini AI',
+      noData: 'Walang aktibong ulat sa sektor na ito na masusuri.'
     }
   }
 };

@@ -67,8 +67,10 @@ To facilitate evaluation and testing of role-based features, the database is pre
 | **System Admin** | `admin` | `admin` | Full administrative access. Test overall system oversight, citizen ID verification, report moderation, and agency management. |
 | **Verified Citizen** | `testcitizen` | `Testcitizen123` | Pre-verified citizen account with existing report history and 35+ upvotes. Test submitting verified hazard pins, saving travel routes, upvoting, and commenting. |
 | **Unverified Citizen** | `test-shane` | `test-shane` | Standard citizen account with pending verification status. Test submitting reports (displays the **Unverified Disclaimer** badge), exploring community feeds, and requesting verification. |
-| **Emergency Responder (BFP)** | `bfp-malabon` | `bfp-malabon` | Bureau of Fire Protection responder for Malabon City. Access specialized responder dashboards, view agency-routed emergencies (Fire/Flood), and update incident progress tags (*Unresolved*, *Pending Resolution*, *Resolved*). |
-| **LGU Officer** | `lgu-malabon` | `lgu-malabon` | Local Government Unit official for Malabon City. Access localized municipal oversight dashboards, monitor road/infrastructure hazards, and manage community safety reports within the jurisdiction. |
+| **Emergency Responder (Malabon)** | `bfp-malabon` | `bfp-malabon` | Bureau of Fire Protection responder for Malabon City. Access specialized responder dashboards, view agency-routed emergencies (Fire/Flood), and update incident progress tags (*Unresolved*, *Pending Resolution*, *Resolved*). |
+| **LGU Officer (Malabon)** | `lgu-malabon` | `lgu-malabon` | Local Government Unit official for Malabon City. Access localized municipal oversight dashboards, monitor road/infrastructure hazards, and manage community safety reports within the jurisdiction. |
+| **Emergency Responder (Manila)** | `bfp-manila` | `bfp-manila` | Bureau of Fire Protection responder for City of Manila. View Manila-specific fire and flood emergencies and manage dispatch statuses. |
+| **LGU Officer (Manila)** | `lgu-manila` | `lgu-manila` | Local Government Unit official for City of Manila. Monitor all public works, infrastructure, and utility hazard reports across Manila. |
 
 > [!TIP]
 > **Quick Test Tip:** You can open an incognito or private browser window to log in as a citizen (e.g., `testcitizen`) while keeping an LGU/Responder account (`bfp-malabon` or `lgu-malabon`) open in your main window to test real-time report routing, upvoting, and status updates!
