@@ -7,6 +7,8 @@ import { RoutesView } from './components/RoutesView';
 import { ReportsView } from './components/ReportsView';
 import { ProfileView } from './components/ProfileView';
 import { VerificationView } from './components/VerificationView';
+import { AiTrendAnalysisPanel } from './components/AiTrendAnalysisPanel';
+import { PanelHeader } from './components/PanelHeader';
 import { AddReportModal } from './components/AddReportModal';
 import { ReportDetailPanel } from './components/ReportDetailPanel';
 import { AddRouteModal } from './components/AddRouteModal';
@@ -29,7 +31,7 @@ const CATEGORIES = [
 
 export default function App() {
   const [activePanel, setActivePanel] = useState<AppPanel>(null);
-  const [reportsInitialTab, setReportsInitialTab] = useState<'my-reports' | 'summary' | 'ai-trends'>('my-reports');
+  const [reportsInitialTab, setReportsInitialTab] = useState<'my-reports' | 'summary'>('my-reports');
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [showVerification, setShowVerification] = useState(false);
   const [showAddReport, setShowAddReport] = useState(false);
@@ -382,10 +384,6 @@ export default function App() {
               onClearActiveRoute={() => setActiveRoute(null)}
               theme={theme}
               currentUser={currentUser}
-              onOpenAiTrends={() => {
-                setReportsInitialTab('ai-trends');
-                setActivePanel('reports');
-              }}
             />
           </div>
 
@@ -477,6 +475,14 @@ export default function App() {
                 }
               }}
             />
+          )}
+          {activePanel === 'ai-trends' && currentUser && (
+            <div className="flex-1 flex flex-col bg-[#F5F0C0] overflow-y-auto px-4 pb-28 animate-in fade-in duration-200">
+              <PanelHeader title={(t as any).aiTrends?.tabLabel || 'AI Trend Analysis'} onBack={() => handlePanelSelect(null)} />
+              <div className="mt-2">
+                <AiTrendAnalysisPanel currentUser={currentUser} />
+              </div>
+            </div>
           )}
           {activePanel === 'profile' && currentUser && (
             <ProfileView

@@ -1,4 +1,4 @@
-import { Bell, Navigation, AlertCircle, User, Shield } from 'lucide-react';
+import { Bell, Navigation, AlertCircle, User, Shield, Sparkles } from 'lucide-react';
 import type { AppPanel } from '../types';
 
 interface Props {
@@ -12,6 +12,7 @@ const tabs: { key: AppPanel; Icon: React.ElementType; label: string }[] = [
   { key: 'notifications', Icon: Bell, label: 'Notifs' },
   { key: 'routes', Icon: Navigation, label: 'Routes' },
   { key: 'reports', Icon: AlertCircle, label: 'Reports' },
+  { key: 'ai-trends', Icon: Sparkles, label: 'AI Trends' },
   { key: 'verification', Icon: Shield, label: 'Verify' },
   { key: 'profile', Icon: User, label: 'Profile' },
 ];
