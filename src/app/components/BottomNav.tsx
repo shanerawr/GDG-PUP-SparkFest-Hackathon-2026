@@ -1,4 +1,4 @@
-import { Bell, Navigation, AlertCircle, User } from 'lucide-react';
+import { Bell, Navigation, AlertCircle, User, Shield } from 'lucide-react';
 import type { AppPanel } from '../types';
 
 interface Props {
@@ -12,13 +12,20 @@ const tabs: { key: AppPanel; Icon: React.ElementType; label: string }[] = [
   { key: 'notifications', Icon: Bell, label: 'Notifs' },
   { key: 'routes', Icon: Navigation, label: 'Routes' },
   { key: 'reports', Icon: AlertCircle, label: 'Reports' },
+  { key: 'verification', Icon: Shield, label: 'Verify' },
   { key: 'profile', Icon: User, label: 'Profile' },
 ];
 
 export function BottomNav({ activePanel, onSelect, unreadCount, userRole }: Props) {
-  const visibleTabs = userRole === 'admin' || userRole === 'lgu' || userRole === 'authority'
-    ? tabs.filter(t => t.key !== 'routes')
-    : tabs;
+  const visibleTabs = tabs.filter(t => {
+    if (t.key === 'routes') {
+      return userRole !== 'admin' && userRole !== 'lgu' && userRole !== 'authority';
+    }
+    if (t.key === 'verification') {
+      return userRole === 'admin' || userRole === 'lgu';
+    }
+    return true;
+  });
   return (
     <div
       className="flex items-end justify-center px-5 pb-4 pt-2"

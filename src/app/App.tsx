@@ -6,6 +6,7 @@ import { NotificationsPanel } from './components/NotificationsPanel';
 import { RoutesView } from './components/RoutesView';
 import { ReportsView } from './components/ReportsView';
 import { ProfileView } from './components/ProfileView';
+import { VerificationView } from './components/VerificationView';
 import { AddReportModal } from './components/AddReportModal';
 import { ReportDetailPanel } from './components/ReportDetailPanel';
 import { AddRouteModal } from './components/AddRouteModal';
@@ -450,6 +451,12 @@ export default function App() {
               onProfileUpdate={handleProfileUpdate}
               onLogout={handleLogout}
               onStartVerification={() => setShowVerification(true)}
+              onBack={() => setActivePanel(null)}
+            />
+          )}
+          {activePanel === 'verification' && currentUser && (
+            <VerificationView
+              currentUser={currentUser}
               onBack={() => setActivePanel(null)}
             />
           )}

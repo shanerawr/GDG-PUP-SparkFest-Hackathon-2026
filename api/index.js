@@ -150,6 +150,21 @@ async function seedDatabase() {
       upvotesCount: 0,
       joinedDate: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
       notifSettings: { pushEnabled: true, newPinNearby: true, replyReceived: true, upvotesOnPost: true }
+    },
+    {
+      username: 'lgu-malabon',
+      displayName: 'Malabon LGU Officer',
+      password: 'lgu-malabon',
+      role: 'lgu',
+      governmentCategory: 'LGU',
+      municipality: 'Malabon',
+      isVerified: true,
+      verificationStatus: 'verified',
+      createdAt: new Date(),
+      reportsCount: 0,
+      upvotesCount: 0,
+      joinedDate: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+      notifSettings: { pushEnabled: true, newPinNearby: true, replyReceived: true, upvotesOnPost: true }
     }
   ];
 
@@ -850,6 +865,80 @@ app.get('/api/accounts/authorities', async (req, res) => {
     }
     const list = await db.collection('accounts').find({ role: { $in: ['authority', 'lgu'] } }).toArray();
     res.json(list.map(u => ({ ...u, id: u._id.toString() })));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Fetch pending verification accounts for LGU/Admin review
+app.get('/api/accounts/pending-verifications', async (req, res) => {
+  try {
+    const { username } = req.query;
+    if (!username) {
+      return res.status(400).json({ error: "Username is required" });
+    }
+    const requester = await db.collection('accounts').findOne({ username });
+    if (!requester || !['lgu', 'admin'].includes(requester.role)) {
+      return res.status(403).json({ error: "Access denied. Only LGU responders or admins can view pending verifications." });
+    }
+    
+    // Find all citizen accounts requesting verification
+    const list = await db.collection('accounts')
+      .find({ role: 'citizen', verificationStatus: 'pending' })
+      .toArray();
+      
+    res.json(list.map(u => ({ ...u, id: u._id.toString() })));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// LGU/Admin verifies or rejects a citizen's verification request
+app.put('/api/accounts/:id/verify', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, username } = req.body; // status is 'verified' or 'unverified'
+    
+    if (!username) {
+      return res.status(400).json({ error: "Verifier username is required" });
+    }
+    const requester = await db.collection('accounts').findOne({ username });
+    if (!requester || !['lgu', 'admin'].includes(requester.role)) {
+      return res.status(403).json({ error: "Access denied. Only LGU responders or admins can perform verification." });
+    }
+    
+    if (!['verified', 'unverified'].includes(status)) {
+      return res.status(400).json({ error: "Invalid verification status value. Must be 'verified' or 'unverified'." });
+    }
+    
+    const isVerified = status === 'verified';
+    const result = await db.collection('accounts').findOneAndUpdate(
+      { _id: new ObjectId(id) },
+      { $set: { verificationStatus: status, isVerified } },
+      { returnDocument: 'after' }
+    );
+    
+    if (!result) {
+      return res.status(404).json({ error: "Account not found" });
+    }
+    
+    // Create an in-app notification for the citizen
+    const messageTitle = isVerified ? "Account Verified!" : "Verification Application Rejected";
+    const messageDetail = isVerified 
+      ? "Salamat! Your account has been verified by the LGU. You can now post reports." 
+      : "Your verification request has been rejected. Please ensure your ID upload is clear and valid.";
+      
+    await db.collection('notifications').insertOne({
+      targetUser: result.username,
+      type: 'reply',
+      isNew: true,
+      title: messageTitle,
+      subtitle: requester.displayName || requester.username,
+      detail: messageDetail,
+      createdAt: new Date()
+    });
+    
+    res.json({ ...result, id: result._id.toString() });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

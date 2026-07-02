@@ -75,45 +75,8 @@ export function VerificationModal({ user, onClose, onVerificationUpdate }: Props
       .then((res) => res.json())
       .then((data) => {
         onVerificationUpdate(data);
-        
-        // Auto approve after 5 seconds to simulate admin check, triggering a notification!
-        setTimeout(() => {
-          approveVerification();
-        }, 5000);
       })
       .catch(() => onVerificationUpdate(updated));
-  };
-
-  const approveVerification = () => {
-    const verifiedUser = {
-      ...user,
-      verificationStatus: 'verified' as const,
-      isVerified: true,
-    };
-
-    fetch('/api/accounts/profile', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(verifiedUser),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        onVerificationUpdate(data);
-        // Create verification notification
-        fetch('/api/notifications', {
-          method: 'POST',
-          // Since notifications trigger in DB is handled by standard API or local,
-          // let's insert a notification in the backend. Wait, let's create a local notification,
-          // or we can just fetch notifications again! The backend will trigger it if we tell it,
-          // but we can also just fetch. Wait, we can fetch notifications in App.tsx!
-        });
-      })
-      .catch(() => onVerificationUpdate(verifiedUser));
-  };
-
-  const handleInstantVerify = () => {
-    approveVerification();
-    setStep(4); // Success screen
   };
 
   return (
@@ -304,15 +267,9 @@ export function VerificationModal({ user, onClose, onVerificationUpdate }: Props
                   <button
                     disabled={scanning}
                     onClick={() => setStep(1)}
-                    className="flex-1 py-3 border border-gray-200 hover:bg-gray-50 text-gray-600 rounded-xl text-[12px] font-bold transition-colors disabled:opacity-50"
+                    className="w-full py-3 border border-gray-200 hover:bg-gray-50 text-gray-600 rounded-xl text-[12.5px] font-bold transition-colors disabled:opacity-50 cursor-pointer"
                   >
                     Back
-                  </button>
-                  <button
-                    onClick={handleInstantVerify}
-                    className="flex-1 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-[12px] font-bold shadow-md shadow-amber-500/20 transition-colors"
-                  >
-                    ⚡ Fast Verify (Dev)
                   </button>
                 </div>
               </motion.div>
@@ -332,7 +289,7 @@ export function VerificationModal({ user, onClose, onVerificationUpdate }: Props
                 </div>
                 <h3 className="text-[17px] font-extrabold text-slate-900">Verification Pending</h3>
                 <p className="text-[12.5px] text-gray-500 leading-relaxed max-w-[280px] mx-auto">
-                  Your government ID upload is being processed by the system.
+                  Your government ID upload has been submitted and is awaiting review.
                 </p>
                 <div className="bg-white border border-gray-100 rounded-xl p-3.5 text-left text-[11px] text-gray-500 space-y-1.5">
                   <div className="flex justify-between">
@@ -345,14 +302,14 @@ export function VerificationModal({ user, onClose, onVerificationUpdate }: Props
                   </div>
                   <div className="flex justify-between">
                     <span className="font-semibold">Status:</span>
-                    <span className="text-amber-600 font-extrabold">Awaiting Admin (Auto-verify in 5s)</span>
+                    <span className="text-amber-600 font-extrabold">Awaiting LGU Officer Approval</span>
                   </div>
                 </div>
                 <button
-                  onClick={handleInstantVerify}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-3 text-[12px] font-bold shadow-md shadow-blue-500/25 transition-colors"
+                  onClick={onClose}
+                  className="w-full bg-slate-900 hover:bg-slate-800 text-white rounded-xl py-3 text-[12.5px] font-bold transition-colors cursor-pointer"
                 >
-                  Approve Instantly
+                  Got It
                 </button>
               </motion.div>
             )}
