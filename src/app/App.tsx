@@ -15,6 +15,7 @@ import { AddRouteModal } from './components/AddRouteModal';
 import { LoginOverlay } from './components/LoginOverlay';
 import { VerificationModal } from './components/VerificationModal';
 import { useRoutes } from './hooks/useRoutes';
+import { useLanguage } from './contexts/LanguageContext';
 import { matchMunicipality, inferMunicipalityFromAddress } from './utils/municipalityMatcher';
 import type { AppPanel, MapPin, UserReport, SavedRoute, UserProfile } from './types';
 
@@ -30,6 +31,7 @@ const CATEGORIES = [
 ];
 
 export default function App() {
+  const { t } = useLanguage();
   const [activePanel, setActivePanel] = useState<AppPanel>(null);
   const [reportsInitialTab, setReportsInitialTab] = useState<'my-reports' | 'summary'>('my-reports');
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
