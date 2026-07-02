@@ -474,7 +474,7 @@ function MapInner({ pins, activeRoute, onOpenDetail, onClearActiveRoute, theme =
               </svg>
             </span>
             <span className="text-[12px] font-black tracking-wide bg-gradient-to-r from-white via-indigo-100 to-blue-200 bg-clip-text text-transparent">
-              ✨ Gemini AI Trend Insights
+              ✨ Live AI Trend Insights (Gemini & Groq)
             </span>
             <span className="text-[10px] bg-blue-500/20 text-blue-300 border border-blue-400/30 px-2 py-0.5 rounded-full font-extrabold uppercase tracking-wider">
               Live
