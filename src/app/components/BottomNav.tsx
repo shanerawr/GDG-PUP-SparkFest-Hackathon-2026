@@ -22,7 +22,7 @@ export function BottomNav({ activePanel, onSelect, unreadCount, userRole }: Prop
       return userRole !== 'admin' && userRole !== 'lgu' && userRole !== 'authority';
     }
     if (t.key === 'verification') {
-      return userRole === 'admin' || userRole === 'lgu';
+      return userRole === 'admin';
     }
     return true;
   });

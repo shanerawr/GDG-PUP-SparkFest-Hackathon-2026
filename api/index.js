@@ -896,8 +896,8 @@ app.get('/api/accounts/pending-verifications', async (req, res) => {
       return res.status(400).json({ error: "Username is required" });
     }
     const requester = await db.collection('accounts').findOne({ username });
-    if (!requester || !['lgu', 'admin'].includes(requester.role)) {
-      return res.status(403).json({ error: "Access denied. Only LGU responders or admins can view pending verifications." });
+    if (!requester || requester.role !== 'admin') {
+      return res.status(403).json({ error: "Access denied. Only administrators can view pending verifications." });
     }
     
     // Find all citizen accounts requesting verification
@@ -921,8 +921,8 @@ app.put('/api/accounts/:id/verify', async (req, res) => {
       return res.status(400).json({ error: "Verifier username is required" });
     }
     const requester = await db.collection('accounts').findOne({ username });
-    if (!requester || !['lgu', 'admin'].includes(requester.role)) {
-      return res.status(403).json({ error: "Access denied. Only LGU responders or admins can perform verification." });
+    if (!requester || requester.role !== 'admin') {
+      return res.status(403).json({ error: "Access denied. Only administrators can perform verification." });
     }
     
     if (!['verified', 'unverified'].includes(status)) {

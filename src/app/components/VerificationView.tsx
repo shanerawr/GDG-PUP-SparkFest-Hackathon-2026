@@ -87,7 +87,7 @@ export function VerificationView({ currentUser, onBack }: Props) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
               <Shield size={16} className="text-[#47B3E8]" />
-              <h3 className="text-[11px] font-extrabold text-gray-500 uppercase tracking-wider text-slate-800">LGU Citizen Verification Portal</h3>
+              <h3 className="text-[11px] font-extrabold text-gray-500 uppercase tracking-wider text-slate-800">Admin Citizen Verification Portal</h3>
             </div>
             <button
               onClick={fetchRequests}
