@@ -5,6 +5,7 @@ interface Props {
   title: string;
   onBack: () => void;
   bg?: string;
+  titleColor?: string;
   rightAction?: React.ReactNode;
 }
 
@@ -12,7 +13,7 @@ interface Props {
  * Shared back-navigation header used by sub-panels (Notifications, Routes, Reports).
  * Single combined button with ← arrow + map icon, plus a bold page title.
  */
-export function PanelHeader({ title, onBack, bg = '#F5F0C0', rightAction }: Props) {
+export function PanelHeader({ title, onBack, bg = '#F5F0C0', titleColor = 'text-gray-900', rightAction }: Props) {
   return (
     <div
       className="flex items-center justify-between px-4 pt-5 pb-4 flex-shrink-0"
@@ -30,7 +31,7 @@ export function PanelHeader({ title, onBack, bg = '#F5F0C0', rightAction }: Prop
           <Map size={16} color="white" strokeWidth={2} />
         </button>
 
-        <h2 className="text-[22px] font-extrabold text-gray-900 ml-0.5 leading-tight">
+        <h2 className={`text-[22px] font-extrabold ml-0.5 leading-tight ${titleColor}`}>
           {title}
         </h2>
       </div>

@@ -479,9 +479,21 @@ export default function App() {
             />
           )}
           {activePanel === 'ai-trends' && currentUser && (
-            <div className="flex-1 flex flex-col bg-[#F5F0C0] overflow-y-auto px-4 pb-28 animate-in fade-in duration-200">
-              <PanelHeader title={(t as any).aiTrends?.tabLabel || 'AI Trend Analysis'} onBack={() => handlePanelSelect(null)} />
-              <div className="mt-2">
+            <div className="relative flex-1 flex flex-col bg-gradient-to-br from-[#0A1128] via-[#0F1D3E] to-[#0A1128] overflow-y-auto px-4 pb-28 animate-in fade-in duration-300">
+              {/* Animated Ambient Glowing Orbs */}
+              <div className="absolute top-12 left-1/4 w-80 h-80 bg-blue-500/15 rounded-full blur-3xl pointer-events-none animate-pulse" style={{ animationDuration: '6s' }} />
+              <div className="absolute top-1/2 right-6 w-96 h-96 bg-purple-600/15 rounded-full blur-3xl pointer-events-none animate-pulse" style={{ animationDuration: '8s' }} />
+              <div className="absolute bottom-10 left-6 w-72 h-72 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none animate-pulse" style={{ animationDuration: '7s' }} />
+
+              <div className="relative z-10">
+                <PanelHeader 
+                  title={(t as any).aiTrends?.tabLabel || 'AI Trend Analysis'} 
+                  onBack={() => handlePanelSelect(null)} 
+                  bg="transparent" 
+                  titleColor="text-white"
+                />
+              </div>
+              <div className="relative z-10 mt-2">
                 <AiTrendAnalysisPanel currentUser={currentUser} />
               </div>
             </div>

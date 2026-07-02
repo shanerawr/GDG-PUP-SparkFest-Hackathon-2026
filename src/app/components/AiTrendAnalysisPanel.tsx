@@ -216,52 +216,52 @@ export function AiTrendAnalysisPanel({ currentUser }: Props) {
           {/* Quick Metrics Bar */}
           {data.stats && (
             <div className="grid grid-cols-4 gap-2">
-              <div className="bg-white/90 backdrop-blur-sm p-3 rounded-2xl border border-gray-100 shadow-sm text-center">
-                <span className="block text-[18px] font-black text-gray-900">{data.stats.total}</span>
-                <span className="text-[9.5px] font-extrabold text-gray-400 uppercase tracking-tight">Monitored</span>
+              <div className="bg-slate-900/80 backdrop-blur-md p-3 rounded-2xl border border-white/15 shadow-lg text-center">
+                <span className="block text-[18px] font-black text-white">{data.stats.total}</span>
+                <span className="text-[9.5px] font-extrabold text-indigo-300 uppercase tracking-tight">Monitored</span>
               </div>
-              <div className="bg-red-500/10 p-3 rounded-2xl border border-red-200/60 shadow-sm text-center">
-                <span className="block text-[18px] font-black text-red-700">{data.stats.critical}</span>
-                <span className="text-[9.5px] font-extrabold text-red-600 uppercase tracking-tight">Critical</span>
+              <div className="bg-red-950/80 backdrop-blur-md p-3 rounded-2xl border border-red-500/40 shadow-lg text-center">
+                <span className="block text-[18px] font-black text-red-400">{data.stats.critical}</span>
+                <span className="text-[9.5px] font-extrabold text-red-300 uppercase tracking-tight">Critical</span>
               </div>
-              <div className="bg-amber-500/10 p-3 rounded-2xl border border-amber-200/60 shadow-sm text-center">
-                <span className="block text-[18px] font-black text-amber-700">{data.stats.unresolved}</span>
-                <span className="text-[9.5px] font-extrabold text-amber-700 uppercase tracking-tight">Pending</span>
+              <div className="bg-amber-950/80 backdrop-blur-md p-3 rounded-2xl border border-amber-500/40 shadow-lg text-center">
+                <span className="block text-[18px] font-black text-amber-400">{data.stats.unresolved}</span>
+                <span className="text-[9.5px] font-extrabold text-amber-300 uppercase tracking-tight">Pending</span>
               </div>
-              <div className="bg-emerald-500/10 p-3 rounded-2xl border border-emerald-200/60 shadow-sm text-center">
-                <span className="block text-[18px] font-black text-emerald-700">{data.stats.inProgress + data.stats.resolved}</span>
-                <span className="text-[9.5px] font-extrabold text-emerald-700 uppercase tracking-tight">Actioned</span>
+              <div className="bg-emerald-950/80 backdrop-blur-md p-3 rounded-2xl border border-emerald-500/40 shadow-lg text-center">
+                <span className="block text-[18px] font-black text-emerald-400">{data.stats.inProgress + data.stats.resolved}</span>
+                <span className="text-[9.5px] font-extrabold text-emerald-300 uppercase tracking-tight">Actioned</span>
               </div>
             </div>
           )}
 
           {/* Executive Summary */}
-          <div className="bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-purple-500/10 rounded-3xl p-5 border border-indigo-500/20 shadow-sm">
+          <div className="bg-slate-900/80 backdrop-blur-md rounded-3xl p-5 border border-indigo-500/30 shadow-xl text-white">
             <div className="flex items-center gap-2 mb-2">
               <div className="w-6 h-6 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
                 <Activity size={14} />
               </div>
-              <h4 className="text-[14px] font-black text-gray-900 tracking-tight">
+              <h4 className="text-[14px] font-black text-white tracking-tight">
                 {(t as any).aiTrends?.summaryTitle || 'Executive Hazard Synthesis'}
               </h4>
             </div>
-            <p className="text-[13px] font-semibold text-gray-700 leading-relaxed pl-1">
+            <p className="text-[13px] font-semibold text-indigo-100 leading-relaxed pl-1">
               "{data.summary}"
             </p>
           </div>
 
           {/* Hotspots Matrix */}
-          <div className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm space-y-3">
+          <div className="bg-slate-900/80 backdrop-blur-md rounded-3xl p-5 border border-white/15 shadow-xl space-y-3 text-white">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-6 h-6 rounded-lg bg-red-600 flex items-center justify-center text-white shadow-md shadow-red-500/20">
                   <MapPin size={14} />
                 </div>
-                <h4 className="text-[14px] font-black text-gray-900 tracking-tight">
+                <h4 className="text-[14px] font-black text-white tracking-tight">
                   {(t as any).aiTrends?.hotspotsTitle || 'Critical Incident Hotspots'}
                 </h4>
               </div>
-              <span className="text-[11px] font-extrabold text-gray-400 uppercase tracking-wider">
+              <span className="text-[11px] font-extrabold text-indigo-300 uppercase tracking-wider">
                 Top Areas
               </span>
             </div>
@@ -271,36 +271,36 @@ export function AiTrendAnalysisPanel({ currentUser }: Props) {
                 data.hotspots.map((h, idx) => (
                   <div
                     key={idx}
-                    className="flex items-center justify-between p-3.5 rounded-2xl bg-gray-50/80 hover:bg-gray-100/80 border border-gray-200/60 transition-all"
+                    className="flex items-center justify-between p-3.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all"
                   >
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-[13.5px] font-extrabold text-gray-900">{h.area}</span>
+                        <span className="text-[13.5px] font-extrabold text-white">{h.area}</span>
                         {getSeverityBadge(h.severity)}
                       </div>
-                      <p className="text-[11.5px] font-semibold text-gray-500 flex items-center gap-1.5">
-                        <Layers size={12} className="text-[#47B3E8]" /> Threat: <span className="text-gray-700 font-bold">{h.primaryHazard}</span>
+                      <p className="text-[11.5px] font-semibold text-indigo-200/80 flex items-center gap-1.5">
+                        <Layers size={12} className="text-[#47B3E8]" /> Threat: <span className="text-white font-bold">{h.primaryHazard}</span>
                       </p>
                     </div>
                     <div className="text-right pl-3 flex-shrink-0">
-                      <span className="block text-[18px] font-black text-gray-900">{h.hazardCount}</span>
-                      <span className="text-[9.5px] font-extrabold text-gray-400 uppercase">Reports</span>
+                      <span className="block text-[18px] font-black text-white">{h.hazardCount}</span>
+                      <span className="text-[9.5px] font-extrabold text-indigo-300 uppercase">Reports</span>
                     </div>
                   </div>
                 ))
               ) : (
-                <p className="text-[12px] text-gray-500 italic text-center py-4">No critical hotspot groupings detected.</p>
+                <p className="text-[12px] text-indigo-300 italic text-center py-4">No critical hotspot groupings detected.</p>
               )}
             </div>
           </div>
 
           {/* Priority Action Plan */}
-          <div className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm space-y-3">
+          <div className="bg-slate-900/80 backdrop-blur-md rounded-3xl p-5 border border-white/15 shadow-xl space-y-3 text-white">
             <div className="flex items-center gap-2">
               <div className="w-6 h-6 rounded-lg bg-amber-500 flex items-center justify-center text-white shadow-md shadow-amber-500/20">
                 <CheckCircle size={14} />
               </div>
-              <h4 className="text-[14px] font-black text-gray-900 tracking-tight">
+              <h4 className="text-[14px] font-black text-white tracking-tight">
                 {(t as any).aiTrends?.recommendationsTitle || 'Priority Action Plan'}
               </h4>
             </div>
@@ -308,26 +308,26 @@ export function AiTrendAnalysisPanel({ currentUser }: Props) {
             <div className="space-y-2.5 pt-1">
               {data.priorityRecommendations && data.priorityRecommendations.length > 0 ? (
                 data.priorityRecommendations.map((rec, idx) => (
-                  <div key={idx} className="flex items-start gap-3 p-3 rounded-2xl bg-amber-50/40 border border-amber-200/50">
+                  <div key={idx} className="flex items-start gap-3 p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20">
                     <span className="w-6 h-6 rounded-full bg-amber-500 text-white font-black text-[11px] flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm">
                       {idx + 1}
                     </span>
-                    <p className="text-[12.5px] font-bold text-gray-800 leading-snug pt-0.5">{rec}</p>
+                    <p className="text-[12.5px] font-bold text-amber-100 leading-snug pt-0.5">{rec}</p>
                   </div>
                 ))
               ) : (
-                <p className="text-[12px] text-gray-500 italic">No specific recommendations available.</p>
+                <p className="text-[12px] text-indigo-300 italic">No specific recommendations available.</p>
               )}
             </div>
           </div>
 
           {/* Multi-Agency Dispatch Matrix */}
-          <div className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm space-y-3">
+          <div className="bg-slate-900/80 backdrop-blur-md rounded-3xl p-5 border border-white/15 shadow-xl space-y-3 text-white">
             <div className="flex items-center gap-2">
               <div className="w-6 h-6 rounded-lg bg-[#47B3E8] flex items-center justify-center text-white shadow-md shadow-[#47B3E8]/20">
                 <Shield size={14} />
               </div>
-              <h4 className="text-[14px] font-black text-gray-900 tracking-tight">
+              <h4 className="text-[14px] font-black text-white tracking-tight">
                 {(t as any).aiTrends?.coordinationTitle || 'Multi-Agency Dispatch Matrix'}
               </h4>
             </div>
@@ -335,30 +335,30 @@ export function AiTrendAnalysisPanel({ currentUser }: Props) {
             <div className="grid grid-cols-1 gap-2.5 pt-1">
               {data.agencyCoordination && data.agencyCoordination.length > 0 ? (
                 data.agencyCoordination.map((coord, idx) => (
-                  <div key={idx} className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div key={idx} className="p-3.5 rounded-2xl bg-white/5 border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      <span className="px-2.5 py-1 rounded-xl bg-slate-900 text-white font-extrabold text-[10.5px] tracking-wide uppercase shadow-sm">
+                      <span className="px-2.5 py-1 rounded-xl bg-indigo-500/30 border border-indigo-400/30 text-indigo-200 font-extrabold text-[10.5px] tracking-wide uppercase shadow-sm">
                         {coord.agency}
                       </span>
                     </div>
                     <div className="flex items-center gap-1.5 sm:text-right flex-1 sm:justify-end pl-1 sm:pl-4">
                       <ArrowRight size={13} className="text-[#47B3E8] flex-shrink-0 hidden sm:inline" />
-                      <p className="text-[12px] font-bold text-gray-700">{coord.action}</p>
+                      <p className="text-[12px] font-bold text-indigo-100">{coord.action}</p>
                     </div>
                   </div>
                 ))
               ) : (
-                <p className="text-[12px] text-gray-500 italic">No agency routing data available.</p>
+                <p className="text-[12px] text-indigo-300 italic">No agency routing data available.</p>
               )}
             </div>
           </div>
 
           {/* Footer Badge */}
-          <div className="flex items-center justify-center gap-2 pt-2 text-[11px] font-bold text-gray-400">
-            <Sparkles size={13} className="text-amber-500" />
+          <div className="flex items-center justify-center gap-2 pt-2 text-[11px] font-bold text-indigo-300/70">
+            <Sparkles size={13} className="text-amber-400" />
             <span>{data.aiModel || ((t as any).aiTrends?.modelInfo || 'Intelligence powered by Google Gemini')}</span>
             <span>•</span>
-            <span className="text-gray-400">{new Date(data.timestamp || Date.now()).toLocaleTimeString()}</span>
+            <span className="text-indigo-300/60">{new Date(data.timestamp || Date.now()).toLocaleTimeString()}</span>
           </div>
         </div>
       ) : null}
