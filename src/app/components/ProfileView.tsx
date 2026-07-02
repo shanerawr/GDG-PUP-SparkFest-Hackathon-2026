@@ -3,9 +3,9 @@ import { CheckCircle, Bell, Globe, Shield, LogOut, ChevronRight, Edit2, Check, K
 import type { UserProfile } from '../types';
 import { PanelHeader } from './PanelHeader';
 
+import { useLanguage } from '../contexts/LanguageContext';
+
 interface Props {
-  language: 'en' | 'fil';
-  onLanguageToggle: () => void;
   currentUser: UserProfile;
   onProfileUpdate: (user: UserProfile) => void;
   onLogout: () => void;
@@ -13,67 +13,15 @@ interface Props {
   onBack?: () => void;
 }
 
-const t = {
-  en: {
-    profile: 'Profile',
-    verified: 'Verified Account',
-    pending: 'Verification Pending',
-    unverified: 'Unverified Account',
-    verifyNow: 'Verify Identity',
-    settings: 'Settings',
-    notifications: 'Notification Settings',
-    language: 'Language',
-    langValue: 'English',
-    privacy: 'Privacy & Safety',
-    about: 'About BantayBayan',
-    logout: 'Log Out',
-    reports: 'reports submitted',
-    upvotes: 'upvotes received',
-    since: 'Member since',
-    editProfile: 'Edit Profile',
-    saveProfile: 'Save Changes',
-    displayName: 'Display Name',
-    password: 'New Password',
-    darkMode: 'Dark Mode',
-    on: 'On',
-    off: 'Off',
-  },
-  fil: {
-    profile: 'Profile',
-    verified: 'Verified na Account',
-    pending: 'Nakabinbing Pagpapatunay',
-    unverified: 'Hindi Verified',
-    verifyNow: 'Mag-verify ng Wika',
-    settings: 'Mga Setting',
-    notifications: 'Mga Setting ng Notipikasyon',
-    language: 'Wika',
-    langValue: 'Filipino',
-    privacy: 'Privacy at Kaligtasan',
-    about: 'Tungkol sa BantayBayan',
-    logout: 'Mag-logout',
-    reports: 'mga ulat na isinumite',
-    upvotes: 'upvotes na natanggap',
-    since: 'Miyembro mula',
-    editProfile: 'I-edit ang Profile',
-    saveProfile: 'I-save ang mga Pagbabago',
-    displayName: 'Ipakitang Pangalan',
-    password: 'Bagong Password',
-    darkMode: 'Dark Mode',
-    on: 'Bukas',
-    off: 'Sarado',
-  },
-};
-
 export function ProfileView({
-  language,
-  onLanguageToggle,
   currentUser,
   onProfileUpdate,
   onLogout,
   onStartVerification,
   onBack,
 }: Props) {
-  const tx = t[language];
+  const { t, language, setLanguage } = useLanguage();
+  const tx = { ...t.profile, reports_text: t.profile.reports }; // Keep tx for easy find/replace mapping, or just use t.profile
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(currentUser.displayName);
   const [editPassword, setEditPassword] = useState('');
@@ -272,8 +220,8 @@ export function ProfileView({
                     <SettingsRow
                       Icon={Globe}
                       label={tx.language}
-                      value={tx.langValue}
-                      onClick={onLanguageToggle}
+                      value={language === 'en' ? 'English' : 'Filipino'}
+                      onClick={() => setLanguage(language === 'en' ? 'fil' : 'en')}
                     />
                   </div>
 
@@ -475,8 +423,8 @@ export function ProfileView({
               <SettingsRow
                 Icon={Globe}
                 label={tx.language}
-                value={tx.langValue}
-                onClick={onLanguageToggle}
+                value={language === 'en' ? 'English' : 'Filipino'}
+                onClick={() => setLanguage(language === 'en' ? 'fil' : 'en')}
               />
               <SettingsRow Icon={Shield} label={tx.privacy} />
               <SettingsRow Icon={CheckCircle} label={tx.about} />

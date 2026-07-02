@@ -3,6 +3,7 @@ import type { AppNotification, MapPin } from '../types';
 import { LandscapeThumb } from './LandscapeThumb';
 import { PanelHeader } from './PanelHeader';
 import { formatTimeAgo } from '../utils/time';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface Props {
   notifications: AppNotification[];
@@ -92,6 +93,7 @@ export function NotificationsPanel({
   onBack,
   onSelectNotif,
 }: Props) {
+  const { t } = useLanguage();
   const handleMarkRead = (id: string) => {
     fetch(`/api/notifications/${id}/read`, { method: 'PUT' }).catch((err) =>
       console.error(err)
@@ -106,7 +108,7 @@ export function NotificationsPanel({
       style={{ background: '#F5F0C0' }}
     >
       {/* Header */}
-      <PanelHeader title="Notifications" onBack={onBack} />
+      <PanelHeader title={t.notifications.title} onBack={onBack} />
 
       {/* List */}
       <div className="flex-1 overflow-y-auto min-h-0 pb-32">
@@ -116,9 +118,9 @@ export function NotificationsPanel({
               style={{ background: '#FFF9C4' }}>
               <BellOff size={22} className="text-gray-400" />
             </div>
-            <p className="font-bold text-[14px] text-gray-800 mb-0.5">All quiet for now</p>
+            <p className="font-bold text-[14px] text-gray-800 mb-0.5">{t.notifications.allQuiet}</p>
             <p className="text-[12px] text-gray-500 max-w-[200px]">
-              You'll receive alerts here when hazards are reported nearby.
+              {t.notifications.noAlertsDesc}
             </p>
           </div>
         ) : (
@@ -143,7 +145,7 @@ export function NotificationsPanel({
             onClick={onMarkAllRead}
             className="text-[12px] font-semibold text-gray-500 underline underline-offset-2 hover:text-gray-700 transition-colors cursor-pointer"
           >
-            Mark all as read
+            {t.notifications.markAllAsRead}
           </button>
         </div>
       )}

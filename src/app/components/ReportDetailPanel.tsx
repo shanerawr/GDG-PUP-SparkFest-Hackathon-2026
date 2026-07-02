@@ -5,6 +5,7 @@ import { LandscapeThumb } from './LandscapeThumb';
 import type { MapPin as MapPinType, Comment, UserProfile, ReportStatus } from '../types';
 import { HAZARD_COLORS } from '../types';
 import { formatTimeAgo } from '../utils/time';
+import { useLanguage } from '../contexts/LanguageContext';
 
 // Helper to build comment tree
 function buildCommentTree(flatComments: Comment[]) {
@@ -23,6 +24,7 @@ function buildCommentTree(flatComments: Comment[]) {
 }
 
 function CommentNode({ comment, currentUser, onReply, onAction, onReport }: { comment: any, currentUser: any, onReply: (id: string, author: string) => void, onAction: (id: string, action: string) => void, onReport: (id: string) => void }) {
+  const { t } = useLanguage();
   const isOfficial = comment.role && comment.role !== 'citizen';
   const hasFlagged = comment.flaggedBy?.includes(currentUser?.username);
   return (
@@ -58,7 +60,7 @@ function CommentNode({ comment, currentUser, onReply, onAction, onReport }: { co
               onClick={() => onReply(comment.id, comment.author)}
               className="text-[11px] font-bold text-blue-600 hover:underline active:opacity-70 flex items-center gap-1"
             >
-              <MessageCircle size={12} /> Reply
+              <MessageCircle size={12} /> {t.reportDetail.reply}
             </button>
             <button
               onClick={() => onAction(comment.id, 'upvote')}
@@ -75,7 +77,7 @@ function CommentNode({ comment, currentUser, onReply, onAction, onReport }: { co
             <button
               onClick={() => hasFlagged ? onAction(comment.id, 'flag') : onReport(comment.id)}
               className={`text-[11px] ml-auto flex items-center gap-1 ${hasFlagged ? 'text-orange-500' : 'text-gray-500 hover:text-orange-500'}`}
-              title={hasFlagged ? "Remove Flag" : "Flag as inappropriate"}
+              title={hasFlagged ? t.reportDetail.removeFlag : t.reportDetail.flagInappropriate}
             >
               <Flag size={12} />
             </button>
@@ -114,6 +116,7 @@ const statusConfig = {
 };
 
 export function ReportDetailPanel({ pin, onClose, currentUser, onCommentAdded, onStatusUpdated }: Props) {
+  const { t } = useLanguage();
   const [upvotes, setUpvotes] = useState(pin.upvotes || 0);
   const [upvoted, setUpvoted] = useState(false);
   const [shared, setShared] = useState(false);
@@ -513,7 +516,7 @@ export function ReportDetailPanel({ pin, onClose, currentUser, onCommentAdded, o
                 style={{ color: shared ? '#16a34a' : '#6b7280' }}
               >
                 {shared ? <CheckCircle size={14} /> : <Share2 size={14} />}
-                <span>{shared ? 'Copied!' : 'Share'}</span>
+                <span>{shared ? t.reportDetail.copied : t.reportDetail.share}</span>
               </button>
             </div>
           </div>
@@ -538,7 +541,7 @@ export function ReportDetailPanel({ pin, onClose, currentUser, onCommentAdded, o
           {/* Photo thumbnails */}
           {allPhotos.length > 0 ? (
             <>
-              <p className="text-[12px] font-bold text-gray-400 uppercase tracking-wider mb-2 mt-4">Photos</p>
+              <p className="text-[12px] font-bold text-gray-400 uppercase tracking-wider mb-2 mt-4">{t.reportDetail.photos}</p>
               <div className="flex gap-2 mb-5 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
                 {allPhotos.map((p, idx) => (
                   <img
@@ -553,7 +556,7 @@ export function ReportDetailPanel({ pin, onClose, currentUser, onCommentAdded, o
             </>
           ) : (
             <>
-              <p className="text-[12px] font-bold text-gray-400 uppercase tracking-wider mb-2 mt-4">Photos</p>
+              <p className="text-[12px] font-bold text-gray-400 uppercase tracking-wider mb-2 mt-4">{t.reportDetail.photos}</p>
               <div className="flex gap-2 mb-5">
                 <LandscapeThumb className="flex-1 rounded-xl" style={{ height: 80 } as React.CSSProperties} />
                 <LandscapeThumb className="flex-1 rounded-xl" style={{ height: 80 } as React.CSSProperties} />
@@ -563,7 +566,7 @@ export function ReportDetailPanel({ pin, onClose, currentUser, onCommentAdded, o
 
           {/* Dynamic Replies/Updates Feed */}
           <div className="mt-4 mb-4 pt-3 border-t border-gray-100">
-            <p className="text-[12px] font-bold text-gray-400 uppercase tracking-wider mb-2">Replies & Updates</p>
+            <p className="text-[12px] font-bold text-gray-400 uppercase tracking-wider mb-2">{t.reportDetail.repliesUpdates}</p>
 
             {/* Reply Input Form */}
             {currentUser && (
@@ -593,7 +596,7 @@ export function ReportDetailPanel({ pin, onClose, currentUser, onCommentAdded, o
                     type="submit"
                     className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-4 text-[12px] font-bold active:scale-95 transition-transform"
                   >
-                    Send
+                    {t.reportDetail.send}
                   </button>
                 </form>
               </div>

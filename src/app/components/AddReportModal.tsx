@@ -9,6 +9,7 @@ import { CameraView } from './CameraView';
 import { LocationPickerModal } from './LocationPickerModal';
 import { inferMunicipalityFromAddress } from '../utils/municipalityMatcher';
 import type { UserReport } from '../types';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const GOOGLE_MAPS_API_KEY = 'AIzaSyB2WFoRbVp3HPXHotn27e600KWnHJZZQ80';
 
@@ -18,15 +19,15 @@ interface Props {
   initialData?: UserReport;
 }
 
-const CATEGORIES = [
-  { key: 'flood', label: 'Flood', Icon: Droplets },
-  { key: 'road-damage', label: 'Road Damage', Icon: AlertTriangle },
-  { key: 'peace-and-order', label: 'Peace & Order', Icon: Shield },
-  { key: 'utility-outages', label: 'Utility Outages', Icon: Zap },
-  { key: 'waste-collection', label: 'Waste', Icon: Trash2 },
-  { key: 'infrastructure', label: 'Infra & Public Works', Icon: HardHat },
-  { key: 'fire', label: 'Fire', Icon: Flame },
-  { key: 'other', label: 'Other', Icon: AlertCircle },
+const getCategories = (t: any) => [
+  { key: 'flood', label: t.categories.flood, Icon: Droplets },
+  { key: 'road-damage', label: t.categories.roadDamage, Icon: AlertTriangle },
+  { key: 'peace-and-order', label: t.categories.peaceAndOrder, Icon: Shield },
+  { key: 'utility-outages', label: t.categories.utilityOutages, Icon: Zap },
+  { key: 'waste-collection', label: t.categories.wasteCollection, Icon: Trash2 },
+  { key: 'infrastructure', label: t.categories.infrastructure, Icon: HardHat },
+  { key: 'fire', label: t.categories.fire, Icon: Flame },
+  { key: 'other', label: t.categories.other, Icon: AlertCircle },
 ];
 
 /* ── Combined Location & Radius Map ── */
@@ -215,6 +216,9 @@ function CombinedLocationMap({
 
 /* ── Main modal ── */
 export function AddReportModal({ onClose, onSubmit, initialData }: Props) {
+  const { t } = useLanguage();
+  const CATEGORIES = getCategories(t);
+  
   const [title, setTitle] = useState(initialData?.title || '');
   const [category, setCategory] = useState(initialData?.type || 'flood');
   const [address, setAddress] = useState(initialData?.address || '');
@@ -326,10 +330,10 @@ export function AddReportModal({ onClose, onSubmit, initialData }: Props) {
               <CheckCircle size={40} className="text-green-600" />
             </motion.div>
             <h2 className="text-[22px] font-bold text-gray-900 mb-2">
-              {initialData ? 'Report Updated!' : 'Report Submitted!'}
+              {initialData ? t.addReport.reportUpdated : t.addReport.reportSubmitted}
             </h2>
             <p className="text-[14px] text-gray-600">
-              {initialData ? 'Salamat! Your report has been updated successfully.' : 'Salamat! Your report has been sent to the relevant authorities.'}
+              {initialData ? t.addReport.reportUpdatedDesc : t.addReport.reportSubmittedDesc}
             </p>
           </motion.div>
         ) : (
@@ -337,7 +341,7 @@ export function AddReportModal({ onClose, onSubmit, initialData }: Props) {
 
             {/* Combined Header */}
             <PanelHeader
-              title={initialData ? "Edit Report" : "New Report"}
+              title={initialData ? t.addReport.editReport : t.addReport.newReport}
               onBack={onClose}
               bg="#B8DCE8"
               rightAction={
@@ -356,7 +360,7 @@ export function AddReportModal({ onClose, onSubmit, initialData }: Props) {
               {/* Incident Title & Type */}
               <div className="relative z-20">
                 <p className="text-[14px] font-extrabold text-gray-900 mb-1.5">
-                  Incident <span className="text-red-500">*</span>
+                  {t.addReport.incident} <span className="text-red-500">*</span>
                 </p>
                 <div className="flex items-center bg-white rounded-xl px-3.5 py-3 border border-gray-200 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100 transition-all relative">
                   {/* Selected Category Icon Button */}
@@ -373,7 +377,7 @@ export function AddReportModal({ onClose, onSubmit, initialData }: Props) {
                   <input
                     value={title}
                     onChange={e => setTitle(e.target.value)}
-                    placeholder="e.g. Flooded street near Market"
+                    placeholder={t.addReport.incidentPlaceholder}
                     className="flex-1 text-[13px] text-gray-900 font-medium focus:outline-none bg-transparent"
                   />
 
@@ -386,7 +390,7 @@ export function AddReportModal({ onClose, onSubmit, initialData }: Props) {
                         exit={{ opacity: 0, y: -5 }}
                         className="absolute top-full left-0 mt-2 p-2.5 bg-white rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.12)] border border-gray-100 z-30 flex flex-wrap gap-1.5 w-full"
                       >
-                        <div className="w-full text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1 px-1">Choose Icon</div>
+                        <div className="w-full text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1 px-1">{t.addReport.chooseIcon}</div>
                         {CATEGORIES.map(({ key, label, Icon }) => {
                           const active = category === key;
                           return (
@@ -416,13 +420,13 @@ export function AddReportModal({ onClose, onSubmit, initialData }: Props) {
 
               {/* Hazard Level */}
               <div>
-                <p className="text-[14px] font-extrabold text-gray-900 mb-1.5">Hazard Level</p>
+                <p className="text-[14px] font-extrabold text-gray-900 mb-1.5">{t.addReport.hazardLevel}</p>
                 <div className="flex gap-2 flex-wrap">
                   {([
-                    { key: 'minor', label: 'Minor', color: '#ca8a04', bg: '#fefce8', border: '#fef08a' },
-                    { key: 'needs-attention', label: 'Needs Attention', color: '#ea580c', bg: '#fff7ed', border: '#fed7aa' },
-                    { key: 'urgent', label: 'Urgent', color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
-                    { key: 'life-threatening', label: 'Life-Threatening', color: '#991b1b', bg: '#fee2e2', border: '#fca5a5' },
+                    { key: 'minor', label: t.addReport.minor, color: '#ca8a04', bg: '#fefce8', border: '#fef08a' },
+                    { key: 'needs-attention', label: t.addReport.needsAttention, color: '#ea580c', bg: '#fff7ed', border: '#fed7aa' },
+                    { key: 'urgent', label: t.addReport.urgent, color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
+                    { key: 'life-threatening', label: t.addReport.lifeThreatening, color: '#991b1b', bg: '#fee2e2', border: '#fca5a5' },
                   ] as const).map(({ key, label, color, bg, border }) => {
                     const active = hazardLevel === key;
                     return (
@@ -452,13 +456,13 @@ export function AddReportModal({ onClose, onSubmit, initialData }: Props) {
               {/* Location */}
               <div>
                 <p className="text-[14px] font-extrabold text-gray-900 mb-1.5">
-                  Location <span className="text-red-500">*</span>
+                  {t.addReport.location} <span className="text-red-500">*</span>
                 </p>
                 {/* Search bar & Current Location — outside the map */}
                 <div className="flex gap-2 mb-2 items-center">
                   <input
                     ref={searchInputRef}
-                    placeholder="Search location..."
+                    placeholder={t.addReport.searchLocation}
                     className="flex-1 bg-white rounded-xl px-3.5 py-2.5 text-[13px] text-gray-900 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-400 font-medium"
                   />
                   <button
@@ -493,7 +497,7 @@ export function AddReportModal({ onClose, onSubmit, initialData }: Props) {
               {/* Upload Photo/s */}
               <div>
                 <p className="text-[14px] font-extrabold text-gray-900 mb-1.5">
-                  Upload Photo/s <span className="text-red-500">*</span>
+                  {t.addReport.uploadPhotos} <span className="text-red-500">*</span>
                 </p>
                 <div className="flex gap-2 items-stretch mb-2">
                   <div
@@ -535,14 +539,14 @@ export function AddReportModal({ onClose, onSubmit, initialData }: Props) {
               {/* Description */}
               <div>
                 <p className="text-[14px] font-extrabold text-gray-900 mb-1.5">
-                  Description
-                  <span className="ml-1.5 text-[11px] font-medium text-gray-400">(optional)</span>
+                  {t.addReport.description}
+                  <span className="ml-1.5 text-[11px] font-medium text-gray-400">{t.addReport.optional}</span>
                 </p>
                 <textarea
                   value={description}
                   onChange={e => setDescription(e.target.value)}
                   rows={3}
-                  placeholder="Add any extra details..."
+                  placeholder={t.addReport.descriptionPlaceholder}
                   className="w-full bg-white rounded-xl px-3.5 py-3 text-[13px] text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
                 />
               </div>
@@ -562,7 +566,7 @@ export function AddReportModal({ onClose, onSubmit, initialData }: Props) {
                   opacity: isFormValid ? 1 : 0.7,
                 }}
               >
-                {initialData ? 'Save Changes' : 'Submit Report'}
+                {initialData ? t.addReport.saveChanges : t.addReport.submitReport}
               </button>
             </div>
           </motion.div>

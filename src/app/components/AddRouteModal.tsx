@@ -5,6 +5,7 @@ import { setOptions, importLibrary } from '@googlemaps/js-api-loader';
 import type { SavedRoute, MapPin, HazardLevel } from '../types';
 import { HAZARD_COLORS, reportSvgPaths } from '../types';
 import { PanelHeader } from './PanelHeader';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyB2WFoRbVp3HPXHotn27e600KWnHJZZQ80';
 
@@ -103,6 +104,7 @@ function MapPicker({
   onConfirm: (latLng: { lat: number; lng: number }, address: string) => void;
   onCancel: () => void;
 }) {
+  const { t } = useLanguage();
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
   const markerRef = useRef<google.maps.Marker | null>(null);
@@ -202,7 +204,21 @@ function MapPicker({
       <div className="px-4 pt-3 pb-6 bg-white border-t border-gray-100 flex-shrink-0">
         {selected ? (
           <div className="mb-3 flex items-start gap-2">
-            <MapPinIcon size={14} className="text-blue-600 flex-shrink-0 mt-0.5" />
+            <div className="flex gap-2 w-full mt-3">
+              <button onClick={onCancel} className="flex-1 py-3 rounded-xl border border-gray-300 font-bold text-gray-700 active:scale-95 transition-transform bg-white">
+                {t.addRoute.cancel}
+              </button>
+              <button
+                onClick={() => {
+                  if (selected) onConfirm(selected, address);
+                }}
+                disabled={!selected}
+                className="flex-1 py-3 rounded-xl font-bold text-white shadow-lg active:scale-95 transition-transform disabled:opacity-50"
+                style={{ background: '#2563EB' }}
+              >
+                {t.addRoute.confirmLocation}
+              </button>
+            </div>
             <p className="text-[12px] text-gray-600 leading-relaxed line-clamp-2">
               {geocoding ? 'Getting address…' : address || `${selected.lat.toFixed(5)}, ${selected.lng.toFixed(5)}`}
             </p>
@@ -212,14 +228,6 @@ function MapPicker({
             Tap anywhere on the map to drop a pin
           </p>
         )}
-        <button
-          onClick={() => selected && onConfirm(selected, address)}
-          disabled={!selected || geocoding}
-          className="w-full py-3.5 rounded-2xl text-white text-[15px] font-bold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-opacity active:scale-[0.98]"
-          style={{ backgroundColor: '#1d4ed8' }}
-        >
-          {geocoding ? <><Loader2 size={16} className="animate-spin" /> Getting address…</> : 'Confirm Location'}
-        </button>
       </div>
     </motion.div>
   );
@@ -228,12 +236,6 @@ function MapPicker({
 /* ─────────────────────────────────────────────────────────────
    Route options config
 ───────────────────────────────────────────────────────────── */
-const TRAVEL_MODES = [
-  { key: 'DRIVING', label: '🚗 Car', mode: 'DRIVING' },
-  { key: 'MOTOR', label: '🛵 Motor', mode: 'DRIVING' },
-  { key: 'TRANSIT', label: '🚌 Transit', mode: 'TRANSIT' },
-  { key: 'WALKING', label: '🚶 Walk', mode: 'WALKING' },
-];
 
 function getDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371e3; // Earth radius in meters
@@ -245,8 +247,6 @@ function getDistance(lat1: number, lng1: number, lat2: number, lng2: number): nu
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
-
-
 
 function RoutePreviewMap({
   startAddress,
@@ -461,6 +461,8 @@ function RoutePreviewMap({
    AddRouteModal
    ───────────────────────────────────────────────────────────── */
 export function AddRouteModal({ onClose, onSave, pins, editRoute }: Props) {
+  const { t } = useLanguage();
+  const isEditMode = !!editRoute;
   const [routeName, setRouteName] = useState(editRoute?.name ?? '');
   const [startAddress, setStartAddress] = useState(editRoute?.from ?? '');
   const [destAddress, setDestAddress] = useState(editRoute?.to ?? '');
@@ -717,15 +719,15 @@ export function AddRouteModal({ onClose, onSave, pins, editRoute }: Props) {
             >
               <CheckCircle size={40} className="text-blue-600" />
             </motion.div>
-            <h2 className="text-[22px] font-bold text-gray-900 mb-2">Route Saved!</h2>
-            <p className="text-[14px] text-gray-500">Your route has been added to your saved routes.</p>
+            <h2 className="text-[22px] font-bold text-gray-900 mb-2">{t.addRoute.routeSaved}</h2>
+            <p className="text-[14px] text-gray-500">{t.addRoute.routeSavedDesc}</p>
           </motion.div>
         ) : (
           /* ── Form ── */
           <motion.div key="form" className="flex-1 flex flex-col overflow-hidden">
 
             <PanelHeader
-              title={isEditMode ? 'Edit Route' : 'New Route'}
+              title={isEditMode ? t.addRoute.editRoute : t.addRoute.newRoute}
               onBack={onClose}
               bg="#B8DCE8"
               rightAction={
@@ -743,12 +745,12 @@ export function AddRouteModal({ onClose, onSave, pins, editRoute }: Props) {
 
               {/* Route Name */}
               <div>
-                <SectionLabel>Route Name <span style={{ color: '#ef4444' }}>*</span></SectionLabel>
+                <SectionLabel>{t.addRoute.routeName} <span style={{ color: '#ef4444' }}>*</span></SectionLabel>
                 <div className="flex items-center bg-white rounded-xl px-3.5 py-3 border border-gray-200 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100 transition-all relative">
                   <input
                     value={routeName}
                     onChange={e => setRouteName(e.target.value)}
-                    placeholder="e.g., Home → Work"
+                    placeholder={t.addRoute.routeNamePlaceholder}
                     className="flex-1 text-[13px] text-gray-900 font-medium focus:outline-none bg-transparent"
                   />
                 </div>
@@ -756,7 +758,7 @@ export function AddRouteModal({ onClose, onSave, pins, editRoute }: Props) {
 
               {/* ── Route Points (Compact Connector Layout) ── */}
               <div>
-                <SectionLabel>Route Points <span style={{ color: '#ef4444' }}>*</span></SectionLabel>
+                <SectionLabel>{t.addRoute.routePoints} <span style={{ color: '#ef4444' }}>*</span></SectionLabel>
                 <div className="bg-white/40 border border-white/60 rounded-2xl p-3 flex gap-3 relative">
                   {/* Visual timeline connector */}
                   <div className="flex flex-col items-center justify-between py-3 flex-shrink-0">
@@ -774,7 +776,7 @@ export function AddRouteModal({ onClose, onSave, pins, editRoute }: Props) {
                     {/* Start Input Group */}
                     <div className="relative">
                       <PlacesInput
-                        placeholder="Choose starting point..."
+                        placeholder={t.addRoute.chooseStart}
                         value={startAddress}
                         onChange={v => { setStartAddress(v); setStartLatLng(null); }}
                         onPlaceSelected={p => { setStartPlace(p); setStartLatLng(null); setUseCurrentLocation(false); }}
@@ -786,7 +788,7 @@ export function AddRouteModal({ onClose, onSave, pins, editRoute }: Props) {
                         <button
                           type="button"
                           onClick={() => setUseCurrentLocation(!useCurrentLocation)}
-                          title="Use current location"
+                          title={t.addRoute.useCurrentLocation}
                           className={`p-1.5 rounded-lg border transition-all ${useCurrentLocation ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-gray-50 border-gray-100 text-gray-500 hover:bg-gray-100 hover:text-gray-800'}`}
                         >
                           <Navigation size={12} className={useCurrentLocation ? "animate-pulse" : ""} />
@@ -795,7 +797,7 @@ export function AddRouteModal({ onClose, onSave, pins, editRoute }: Props) {
                           type="button"
                           onClick={() => setMapPicker('start')}
                           disabled={useCurrentLocation}
-                          title="Pin on Map"
+                          title={t.addRoute.pinOnMap}
                           className="p-1.5 rounded-lg border bg-gray-50 border-gray-100 text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition-all disabled:opacity-40"
                         >
                           <Map size={12} />
@@ -803,7 +805,7 @@ export function AddRouteModal({ onClose, onSave, pins, editRoute }: Props) {
                       </div>
                       {startLatLng && !useCurrentLocation && (
                         <p className="absolute left-3 -bottom-4 text-[9px] text-blue-600 font-semibold flex items-center gap-0.5 pointer-events-none">
-                          <MapPinIcon size={8} /> Pinned
+                          <MapPinIcon size={8} /> {t.addRoute.pinned}
                         </p>
                       )}
                     </div>
@@ -811,7 +813,7 @@ export function AddRouteModal({ onClose, onSave, pins, editRoute }: Props) {
                     {/* Destination Input Group */}
                     <div className="relative">
                       <PlacesInput
-                        placeholder="Choose destination..."
+                        placeholder={t.addRoute.chooseDest}
                         value={destAddress}
                         onChange={v => { setDestAddress(v); setDestLatLng(null); }}
                         onPlaceSelected={p => { setDestPlace(p); setDestLatLng(null); }}
@@ -822,7 +824,7 @@ export function AddRouteModal({ onClose, onSave, pins, editRoute }: Props) {
                         <button
                           type="button"
                           onClick={() => setMapPicker('dest')}
-                          title="Pin on Map"
+                          title={t.addRoute.pinOnMap}
                           className="p-1.5 rounded-lg border bg-gray-50 border-gray-100 text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition-all"
                         >
                           <Map size={12} />
@@ -830,7 +832,7 @@ export function AddRouteModal({ onClose, onSave, pins, editRoute }: Props) {
                       </div>
                       {destLatLng && (
                         <p className="absolute left-3 -bottom-4 text-[9px] text-blue-600 font-semibold flex items-center gap-0.5 pointer-events-none">
-                          <MapPinIcon size={8} /> Pinned
+                          <MapPinIcon size={8} /> {t.addRoute.pinned}
                         </p>
                       )}
                     </div>
@@ -856,9 +858,14 @@ export function AddRouteModal({ onClose, onSave, pins, editRoute }: Props) {
 
               {/* Route Options */}
               <div>
-                <SectionLabel>Travel Mode</SectionLabel>
+                <SectionLabel>{t.addRoute.travelMode}</SectionLabel>
                 <div className="grid grid-cols-4 gap-1.5 mb-4">
-                  {TRAVEL_MODES.map(m => {
+                  {[
+                    { key: 'DRIVING', label: t.routes.car },
+                    { key: 'MOTOR', label: t.routes.motor },
+                    { key: 'TRANSIT', label: t.routes.transit },
+                    { key: 'WALKING', label: t.routes.walk },
+                  ].map(m => {
                     const active = travelMode === m.key;
                     return (
                       <button
@@ -888,9 +895,9 @@ export function AddRouteModal({ onClose, onSave, pins, editRoute }: Props) {
                   className="w-full py-2.5 rounded-xl border border-blue-200 text-blue-600 bg-blue-50/50 hover:bg-blue-50 text-[13px] font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {calculatingAlternatives ? (
-                    <><Loader2 size={14} className="animate-spin" /> Analyzing Safety…</>
+                    <><Loader2 size={14} className="animate-spin" /> {t.addRoute.analyzingSafety}</>
                   ) : (
-                    '🛡️ Find Safest Route'
+                    t.addRoute.findSafestRoute
                   )}
                 </button>
               </div>
@@ -898,7 +905,7 @@ export function AddRouteModal({ onClose, onSave, pins, editRoute }: Props) {
               {/* Alternatives List */}
               {calculatedRoutes.length > 0 && (
                 <div className="space-y-2 border border-gray-100 bg-gray-50/50 p-3 rounded-2xl">
-                  <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">Select Route Path:</p>
+                  <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">{t.addRoute.selectRoutePath}</p>
                   <div className="space-y-1.5">
                     {calculatedRoutes.map((r, idx) => {
                       const leg = r.legs?.[0];
@@ -916,9 +923,9 @@ export function AddRouteModal({ onClose, onSave, pins, editRoute }: Props) {
                         >
                           <div className="flex flex-col">
                             <span className={`font-semibold flex items-center gap-1.5 ${selected ? 'text-blue-600' : 'text-gray-700'}`}>
-                              Option {idx + 1} {r.hazardCount === 0 ? '🛡️ Safe Route' : `(⚠️ ${r.hazardCount} Hazard${r.hazardCount > 1 ? 's' : ''})`}
+                              {t.addRoute.option} {idx + 1} {r.hazardCount === 0 ? t.addRoute.safeRoute : `(⚠️ ${r.hazardCount} ${r.hazardCount > 1 ? t.addRoute.hazards : t.addRoute.hazard})`}
                             </span>
-                            <span className="text-[11px] text-gray-400">Via {r.summary || 'Main road'}</span>
+                            <span className="text-[11px] text-gray-400">{t.addRoute.via} {r.summary || t.addRoute.mainRoad}</span>
                           </div>
                           <div className="text-right flex flex-col">
                             <span className="font-bold text-gray-900">{leg?.duration?.text || '—'}</span>
@@ -954,8 +961,8 @@ export function AddRouteModal({ onClose, onSave, pins, editRoute }: Props) {
                 }}
               >
                 {saving
-                  ? <><Loader2 size={18} className="animate-spin" /> Calculating Route…</>
-                  : isEditMode ? 'Update Route' : 'Save Route'
+                  ? <><Loader2 size={18} className="animate-spin" /> {t.addRoute.calculatingRoute}</>
+                  : isEditMode ? t.addRoute.updateRoute : t.addRoute.saveRoute
                 }
               </button>
             </div>
@@ -969,7 +976,7 @@ export function AddRouteModal({ onClose, onSave, pins, editRoute }: Props) {
         {mapPicker && (
           <MapPicker
             key={mapPicker}
-            label={mapPicker === 'start' ? 'Start Point' : 'Destination'}
+            label={mapPicker === 'start' ? t.addRoute.startPoint : t.addRoute.destination}
             initialLatLng={
               mapPicker === 'start'
                 ? (startLatLng ?? undefined)

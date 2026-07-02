@@ -3,6 +3,7 @@ import { Plus, MoreHorizontal, AlertCircle, ChevronDown, ChevronUp, Eye, Edit2, 
 import { motion, AnimatePresence } from 'motion/react';
 import type { SavedRoute, MapPin } from '../types';
 import { PanelHeader } from './PanelHeader';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface Props {
   routes: SavedRoute[];
@@ -55,6 +56,7 @@ function RouteCard({
   onEdit: () => void;
   onViewOnMap: () => void;
 }) {
+  const { t } = useLanguage();
   const [menuOpen, setMenuOpen] = useState(false);
   const [hazardsOpen, setHazardsOpen] = useState(false);
 
@@ -75,12 +77,12 @@ function RouteCard({
   const uniqueNearbyPins = Object.values(groupedPins);
 
   const MODE_LABELS: Record<string, string> = {
-    DRIVING: '🚗 Car',
-    MOTOR: '🛵 Motor',
-    TRANSIT: '🚌 Transit',
-    WALKING: '🚶 Walk',
+    DRIVING: t.routes.car,
+    MOTOR: t.routes.motor,
+    TRANSIT: t.routes.transit,
+    WALKING: t.routes.walk,
   };
-  const modeLabel = MODE_LABELS[route.travelMode ?? 'DRIVING'] ?? '🚗 Car';
+  const modeLabel = MODE_LABELS[route.travelMode ?? 'DRIVING'] ?? t.routes.car;
 
   return (
     <motion.div
@@ -139,13 +141,13 @@ function RouteCard({
               style={{ background: '#ef4444', color: 'white' }}
             >
               <AlertCircle size={9} />
-              {nearbyCount} Report{nearbyCount > 1 ? 's' : ''} Nearby
+              {nearbyCount} {nearbyCount > 1 ? t.routes.reportsNearbyPlural : t.routes.reportsNearby}
               {hazardsOpen ? <ChevronUp size={9} /> : <ChevronDown size={9} />}
             </button>
           ) : (
             <span className="mt-2 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold"
               style={{ background: '#bbf7d0', color: '#166534' }}>
-              ✓ Clear
+              {t.routes.clear}
             </span>
           )}
         </div>
@@ -154,21 +156,21 @@ function RouteCard({
         <div className="flex items-center gap-1 flex-shrink-0">
           <button
             onClick={onViewOnMap}
-            title="View on Map"
+            title={t.routes.viewOnMap}
             className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-white rounded-lg transition-colors cursor-pointer"
           >
             <Eye size={16} />
           </button>
           <button
             onClick={onEdit}
-            title="Edit Route"
+            title={t.routes.editRoute}
             className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-white rounded-lg transition-colors cursor-pointer"
           >
             <Edit2 size={16} />
           </button>
           <button
             onClick={onDelete}
-            title="Delete Route"
+            title={t.routes.deleteRoute}
             className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-white rounded-lg transition-colors cursor-pointer"
           >
             <Trash2 size={16} />
@@ -195,7 +197,7 @@ function RouteCard({
                       x{pin.count}
                     </span>
                   )}
-                  <span className="text-gray-400 ml-1.5 text-[10px]">({pin.address || 'nearby'})</span>
+                  <span className="text-gray-400 ml-1.5 text-[10px]">({pin.address || t.routes.nearby})</span>
                 </div>
               </div>
             ))}
@@ -207,13 +209,14 @@ function RouteCard({
 }
 
 export function RoutesView({ routes, pins, onAddRoute, onDeleteRoute, onEditRoute, onViewOnMap, onBack }: Props) {
+  const { t } = useLanguage();
   return (
     <div
       className="absolute inset-0 z-40 flex flex-col"
       style={{ background: '#F5F0C0' }}
     >
       {/* Header */}
-      <PanelHeader title="Saved Routes" onBack={onBack} />
+      <PanelHeader title={t.routes.savedRoutes} onBack={onBack} />
 
       {/* List */}
       <div className="flex-1 overflow-y-auto px-4 pb-28">
@@ -225,8 +228,8 @@ export function RoutesView({ routes, pins, onAddRoute, onDeleteRoute, onEditRout
                 <polyline points="9 22 9 12 15 12 15 22" />
               </svg>
             </div>
-            <p className="text-[14px] font-bold text-gray-500">No saved routes yet</p>
-            <p className="text-[12px] text-gray-400 mt-1">Tap + to add your first route</p>
+            <p className="text-[14px] font-bold text-gray-500">{t.routes.noRoutes}</p>
+            <p className="text-[12px] text-gray-400 mt-1">{t.routes.addFirstRoute}</p>
           </div>
         ) : (
           <AnimatePresence>

@@ -38,7 +38,6 @@ export default function App() {
   const [detailPin, setDetailPin] = useState<MapPin | null>(null);
   const [activeRoute, setActiveRoute] = useState<SavedRoute | null>(null);
   const [notifications, setNotifications] = useState<any[]>([]);
-  const [language, setLanguage] = useState<'en' | 'fil'>('en');
   const { routes, addRoute, updateRoute, deleteRoute } = useRoutes();
 
   const [pins, setPins] = useState<MapPin[]>([]);
@@ -467,8 +466,6 @@ export default function App() {
           )}
           {activePanel === 'profile' && currentUser && (
             <ProfileView
-              language={language}
-              onLanguageToggle={() => setLanguage(l => (l === 'en' ? 'fil' : 'en'))}
               currentUser={{
                 ...currentUser,
                 reportsCount: pins.filter(p => p.reportedBy === currentUser.username).length,

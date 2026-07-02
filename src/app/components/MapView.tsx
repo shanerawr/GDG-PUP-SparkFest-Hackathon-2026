@@ -5,19 +5,14 @@ import { motion, AnimatePresence } from 'motion/react';
 import type { MapPin, HazardLevel, HazardFilter, SavedRoute } from '../types';
 import { HAZARD_COLORS, reportSvgPaths } from '../types';
 import { formatTimeAgo } from '../utils/time';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const GOOGLE_MAPS_API_KEY = "AIzaSyB2WFoRbVp3HPXHotn27e600KWnHJZZQ80";
 
 
 
 
-const FILTERS: { key: HazardFilter; label: string }[] = [
-  { key: 'all', label: 'All' },
-  { key: 'minor', label: 'Minor' },
-  { key: 'needs-attention', label: 'Needs Attention' },
-  { key: 'urgent', label: 'Urgent' },
-  { key: 'life-threatening', label: 'Critical' },
-];
+// FILTERS moved inside component
 
 interface Props {
   pins: MapPin[];
@@ -64,6 +59,16 @@ class MapErrorBoundary extends Component<{ children: React.ReactNode }, EBState>
 
 /* ── Filter Dropdown ── */
 function FilterDropdown({ filter, onChange }: { filter: HazardFilter; onChange: (f: HazardFilter) => void }) {
+  const { t } = useLanguage();
+  
+  const FILTERS: { key: HazardFilter; label: string }[] = [
+    { key: 'all', label: t.map.filters.all },
+    { key: 'minor', label: t.map.filters.minor },
+    { key: 'needs-attention', label: t.map.filters.needsAttention },
+    { key: 'urgent', label: t.map.filters.urgent },
+    { key: 'life-threatening', label: t.map.filters.critical },
+  ];
+
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const active = FILTERS.find(f => f.key === filter)!;
@@ -88,7 +93,7 @@ function FilterDropdown({ filter, onChange }: { filter: HazardFilter; onChange: 
             : { background: 'white', borderColor: '#e5e7eb', color: '#111' }
         }
       >
-        <span>Filter: {active.label}</span>
+        <span>{t.map.filter}: {active.label}</span>
         <ChevronDown size={14} strokeWidth={2.5}
           style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}
         />
@@ -126,6 +131,7 @@ function FilterDropdown({ filter, onChange }: { filter: HazardFilter; onChange: 
 
 /* ── Inner map component (rendered inside error boundary) ── */
 function MapInner({ pins, activeRoute, onOpenDetail, onClearActiveRoute }: Props) {
+  const { t } = useLanguage();
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.Marker[]>([]);
@@ -400,7 +406,7 @@ function MapInner({ pins, activeRoute, onOpenDetail, onClearActiveRoute }: Props
               <line x1="8" y1="2" x2="8" y2="18"/>
               <line x1="16" y1="6" x2="16" y2="22"/>
             </svg>
-            Map
+            {t.map.mapLabel}
           </div>
           <FilterDropdown filter={filter} onChange={setFilter} />
         </div>
@@ -410,7 +416,7 @@ function MapInner({ pins, activeRoute, onOpenDetail, onClearActiveRoute }: Props
             className="pointer-events-auto flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 active:scale-95 text-white rounded-full text-[11px] font-bold shadow-lg transition-all cursor-pointer"
           >
             <X size={12} />
-            Clear Route: {activeRoute.name}
+            {t.map.clearRoute}: {activeRoute.name}
           </button>
         )}
       </div>
