@@ -1537,7 +1537,7 @@ app.put('/api/accounts/:id/admin-edit', async (req, res) => {
 
 app.post('/api/trends/analyze', async (req, res) => {
   try {
-    const { municipality, governmentCategory, role, filterType } = req.body || {};
+    const { municipality, governmentCategory, role, filterType, provider } = req.body || {};
     
     // Fetch all active pins and reports
     let query = {};
@@ -1617,15 +1617,7 @@ app.post('/api/trends/analyze', async (req, res) => {
       };
     };
 
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      console.log("No GEMINI_API_KEY found, returning data-driven fallback analysis.");
-      return res.json(generateFallback());
-    }
-
-    // Try calling Google Gemini API
-    try {
-      const promptText = `You are BantayBayan AI, an intelligent community disaster and hazard trend analyst for emergency responders (BFP, PNP, LGU, DRRMO) in the Philippines.
+    const promptText = `You are BantayBayan AI, an intelligent community disaster and hazard trend analyst for emergency responders (BFP, PNP, LGU, DRRMO) in the Philippines.
 Analyze the following real-time community hazard report data:
 Total reports: ${totalCount}
 Unresolved: ${unresolvedCount}, In-Progress: ${inProgressCount}, Resolved: ${resolvedCount}, Critical/Life-Threatening: ${criticalCount}
@@ -1650,6 +1642,69 @@ Provide a structured JSON response (without markdown code blocks, just raw valid
   ]
 }`;
 
+    if (provider === 'groq') {
+      const groqApiKey = process.env.GROQ_API_KEY;
+      if (!groqApiKey) {
+        console.log("No GROQ_API_KEY found, returning data-driven fallback analysis.");
+        return res.json(generateFallback());
+      }
+      try {
+        const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${groqApiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: "llama-3.3-70b-versatile",
+            messages: [
+              { role: "system", content: "You are BantayBayan AI, a hazard intelligence analyst. You MUST respond with ONLY valid JSON matching the exact schema provided by the user." },
+              { role: "user", content: promptText }
+            ],
+            temperature: 0.3,
+            response_format: { type: "json_object" }
+          })
+        });
+
+        if (!groqRes.ok) {
+          const errText = await groqRes.text().catch(() => '');
+          console.warn(`Groq API HTTP Error ${groqRes.status}: ${errText}. Using smart fallback.`);
+          return res.json(generateFallback());
+        }
+
+        const groqData = await groqRes.json();
+        const rawText = groqData?.choices?.[0]?.message?.content;
+        if (!rawText) return res.json(generateFallback());
+
+        let parsedAi;
+        try {
+          const cleanedJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+          parsedAi = JSON.parse(cleanedJson);
+        } catch (parseErr) {
+          console.warn("Failed to parse Groq JSON output, using fallback.", parseErr);
+          return res.json(generateFallback());
+        }
+
+        return res.json({
+          ...parsedAi,
+          stats: { total: totalCount, unresolved: unresolvedCount, inProgress: inProgressCount, resolved: resolvedCount, critical: criticalCount },
+          aiModel: 'Groq Llama 3.3 70B (Live AI)',
+          timestamp: new Date().toISOString()
+        });
+      } catch (groqErr) {
+        console.warn("Groq API request failed, using smart fallback:", groqErr.message);
+        return res.json(generateFallback());
+      }
+    }
+
+    // Default: Try calling Google Gemini API
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      console.log("No GEMINI_API_KEY found, returning data-driven fallback analysis.");
+      return res.json(generateFallback());
+    }
+
+    try {
       const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1687,7 +1742,7 @@ Provide a structured JSON response (without markdown code blocks, just raw valid
       return res.json({
         ...parsedAi,
         stats: { total: totalCount, unresolved: unresolvedCount, inProgress: inProgressCount, resolved: resolvedCount, critical: criticalCount },
-        aiModel: 'Gemini 2.5 Flash (Live AI)',
+        aiModel: 'Gemini 1.5 Flash (Live AI)',
         timestamp: new Date().toISOString()
       });
     } catch (apiErr) {

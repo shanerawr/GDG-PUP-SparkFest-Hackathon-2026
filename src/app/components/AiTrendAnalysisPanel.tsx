@@ -42,8 +42,9 @@ export function AiTrendAnalysisPanel({ currentUser }: Props) {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<string>('all');
+  const [provider, setProvider] = useState<'gemini' | 'groq'>('gemini');
 
-  const fetchAnalysis = async (filter = filterType) => {
+  const fetchAnalysis = async (filter = filterType, aiProvider = provider) => {
     setLoading(true);
     setError(null);
     try {
@@ -55,6 +56,7 @@ export function AiTrendAnalysisPanel({ currentUser }: Props) {
           governmentCategory: currentUser.governmentCategory || '',
           role: currentUser.role || 'authority',
           filterType: filter,
+          provider: aiProvider,
         }),
       });
       if (!res.ok) throw new Error(`Server returned ${res.status}`);
@@ -69,7 +71,7 @@ export function AiTrendAnalysisPanel({ currentUser }: Props) {
 
   useEffect(() => {
     fetchAnalysis();
-  }, [currentUser, filterType]);
+  }, [currentUser, filterType, provider]);
 
   const getSeverityBadge = (sev: string) => {
     switch (sev) {
@@ -105,7 +107,7 @@ export function AiTrendAnalysisPanel({ currentUser }: Props) {
           <div className="space-y-1">
             <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-[10px] font-extrabold tracking-wider uppercase mb-1">
               <Sparkles size={12} className="text-amber-400 animate-spin" style={{ animationDuration: '4s' }} />
-              <span>{(t as any).aiTrends?.title || 'Gemini AI Hazard Intelligence'}</span>
+              <span>{provider === 'groq' ? 'Groq Llama 3 AI Hazard Intelligence' : ((t as any).aiTrends?.title || 'Gemini AI Hazard Intelligence')}</span>
             </div>
             <h3 className="text-[17px] font-black tracking-tight text-white leading-tight">
               {currentUser.municipality ? `${currentUser.municipality} Sector Analysis` : 'National Community Hazard Trends'}
@@ -125,42 +127,64 @@ export function AiTrendAnalysisPanel({ currentUser }: Props) {
           </button>
         </div>
 
-        {/* Quick Filter Chips */}
-        <div className="relative z-10 mt-4 pt-3 border-t border-white/10 flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-          <span className="text-[10px] font-bold text-indigo-300 mr-1 flex items-center gap-1 flex-shrink-0">
-            <Filter size={11} /> Filter:
-          </span>
-          {[
-            { id: 'all', label: (t as any).aiTrends?.filterAll || 'All Hazards' },
-            { id: 'flood', label: 'Flood & Water' },
-            { id: 'infrastructure', label: 'Road & Infra' },
-            { id: 'utility-outages', label: 'Utility Outages' },
-            { id: 'fire', label: 'Fire & Emergency' },
-          ].map((item) => (
+        {/* Quick Filter & AI Provider Bar */}
+        <div className="relative z-10 mt-4 pt-3 border-t border-white/10 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+            <span className="text-[10px] font-bold text-indigo-300 mr-1 flex items-center gap-1 flex-shrink-0">
+              <Filter size={11} /> Filter:
+            </span>
+            {[
+              { id: 'all', label: (t as any).aiTrends?.filterAll || 'All Hazards' },
+              { id: 'flood', label: 'Flood & Water' },
+              { id: 'infrastructure', label: 'Road & Infra' },
+              { id: 'utility-outages', label: 'Utility Outages' },
+              { id: 'fire', label: 'Fire & Emergency' },
+            ].map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setFilterType(item.id)}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex-shrink-0 cursor-pointer ${
+                  filterType === item.id
+                    ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-md border border-blue-400/50 scale-105'
+                    : 'bg-white/5 hover:bg-white/10 text-indigo-200 border border-white/10'
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+
+          {/* AI Model Switcher */}
+          <div className="flex items-center gap-1 bg-white/10 p-1 rounded-xl border border-white/15">
             <button
-              key={item.id}
-              onClick={() => setFilterType(item.id)}
-              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex-shrink-0 cursor-pointer ${
-                filterType === item.id
-                  ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-md border border-blue-400/50 scale-105'
-                  : 'bg-white/5 hover:bg-white/10 text-indigo-200 border border-white/10'
+              onClick={() => setProvider('gemini')}
+              className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold transition-all cursor-pointer flex items-center gap-1 ${
+                provider === 'gemini' ? 'bg-blue-600 text-white shadow-md' : 'text-indigo-200 hover:text-white'
               }`}
             >
-              {item.label}
+              <Sparkles size={11} className={provider === 'gemini' ? 'text-amber-300' : ''} /> Gemini 1.5
             </button>
-          ))}
+            <button
+              onClick={() => setProvider('groq')}
+              className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold transition-all cursor-pointer flex items-center gap-1 ${
+                provider === 'groq' ? 'bg-orange-600 text-white shadow-md' : 'text-indigo-200 hover:text-white'
+              }`}
+            >
+              <Activity size={11} className={provider === 'groq' ? 'text-orange-300' : ''} /> Groq Llama 3
+            </button>
+          </div>
         </div>
       </div>
 
       {loading && !data ? (
         <div className="bg-white/80 backdrop-blur-md rounded-3xl p-12 text-center border border-white/60 shadow-lg space-y-4">
-          <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/25 animate-bounce">
-            <Sparkles size={26} className="text-white animate-pulse" />
+          <div className={`w-14 h-14 mx-auto rounded-2xl ${provider === 'groq' ? 'bg-gradient-to-tr from-orange-500 to-amber-600 shadow-orange-500/25' : 'bg-gradient-to-tr from-blue-600 to-indigo-600 shadow-blue-500/25'} flex items-center justify-center shadow-lg animate-bounce`}>
+            {provider === 'groq' ? <Activity size={26} className="text-white animate-pulse" /> : <Sparkles size={26} className="text-white animate-pulse" />}
           </div>
           <div>
             <h4 className="text-[15px] font-extrabold text-gray-800">Synthesizing Community Reports</h4>
             <p className="text-[12px] font-medium text-gray-500 mt-1 max-w-xs mx-auto">
-              Google Gemini is analyzing geographical clusters, severity metrics, and agency routing priorities...
+              {provider === 'groq' ? 'Groq Llama 3.3 70B' : 'Google Gemini 1.5 Flash'} is analyzing geographical clusters, severity metrics, and agency routing priorities...
             </p>
           </div>
         </div>
