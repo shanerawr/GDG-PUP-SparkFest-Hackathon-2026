@@ -428,8 +428,15 @@ app.post('/api/pins', async (req, res) => {
     await db.collection('reports').insertOne(userReport);
 
     // Trigger "New Hazard Nearby" notification for all other users
+    const pinMuni = req.body.municipality || inferMunicipalityJS(req.body.address || '');
     const otherAccounts = await db.collection('accounts').find({ username: { $ne: req.body.reportedBy } }).toArray();
     for (const acc of otherAccounts) {
+      if ((acc.role === 'lgu' || acc.role === 'barangay' || acc.governmentCategory === 'LGU' || acc.governmentCategory === 'Barangay') && acc.municipality) {
+        if (pinMuni && acc.municipality.toLowerCase().trim() !== pinMuni.toLowerCase().trim()) {
+          continue;
+        }
+      }
+
       if (acc.notifSettings?.newPinNearby !== false) {
         await db.collection('notifications').insertOne({
           targetUser: acc.username,

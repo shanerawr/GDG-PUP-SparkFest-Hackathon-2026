@@ -176,13 +176,31 @@ export default function App() {
       if (!catMatch) return false;
 
       if (userMuni) {
-        const isBrgyRole = govCat === 'barangay' || currentUser?.role === 'barangay' || currentUser?.governmentCategory?.toLowerCase() === 'barangay';
-        const loc = `${(p as any).municipality || ''} ${p.address || ''} ${p.location || ''} ${p.description || ''} ${p.title || ''}`;
-        if (!matchMunicipality(userMuni, loc, isBrgyRole)) return false;
+        const pinMuni = p.municipality || (p as any).municipality;
+        if (pinMuni) {
+          if (pinMuni.toLowerCase().trim() !== userMuni) {
+            return false;
+          }
+        } else {
+          const isBrgyRole = govCat === 'barangay' || currentUser?.role === 'barangay' || currentUser?.governmentCategory?.toLowerCase() === 'barangay';
+          const loc = `${p.address || ''} ${p.location || ''} ${p.description || ''} ${p.title || ''}`;
+          if (!matchMunicipality(userMuni, loc, isBrgyRole)) return false;
+        }
       }
       return true;
     });
   }, [pins, currentUser]);
+
+  const filteredReports = useMemo(() => {
+    if (!currentUser) return userReports;
+    if (currentUser.role !== 'lgu') return userReports;
+    const userMuni = currentUser.municipality?.toLowerCase().trim();
+    if (!userMuni) return userReports;
+    return userReports.filter(r => {
+      const muni = r.municipality || inferMunicipalityFromAddress(r.location || r.address || '');
+      return muni?.toLowerCase().trim() === userMuni;
+    });
+  }, [userReports, currentUser]);
 
   // Fetch reports when current user changes/logs in
   useEffect(() => {
@@ -401,7 +419,7 @@ export default function App() {
           )}
           {activePanel === 'reports' && currentUser && (
             <ReportsView
-              reports={userReports}
+              reports={filteredReports}
               allPins={pins}
               currentUser={currentUser}
               onAddReport={handleAddReportClick}
