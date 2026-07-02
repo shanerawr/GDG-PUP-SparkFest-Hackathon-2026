@@ -10,6 +10,7 @@ When disaster strikes or infrastructure fails, the gap between citizens experien
 * **Reliable Crowdsourcing:** To prevent spam and ensure reliable data, entries are community-verified through a public upvote system. Reports that have not yet been officially acknowledged by authorities display an **Unverified Disclaimer** badge to prevent misinformation.
 * **Multi-Agency & Municipality Routing:** BantayBayan provides LGUs and emergency responders with a centralized dashboard. Reports are automatically tagged by municipality/location and routed to the appropriate government agency (e.g., PNP for Peace & Order, BFP/DRRMO for Fire and Flood, and localized filtering for Barangay responders).
 * **Accountability:** Transparent progress tags (*Unresolved*, *Pending Resolution*, *Resolved*) hold authorities accountable, allowing citizens to see exactly when an issue is being addressed.
+* **AI-Powered Trend Analysis (Google Gemini):** Identifies and aggregates recurring community hazards within specific zones (e.g., detecting chronic flooding or persistent drainage infrastructure failures). This empowers emergency responders and LGUs to analyze historical hazard patterns, prioritize long-term mitigation, and allocate resources more effectively.
 
 This solution directly addresses **SDG 9 (Industry, Innovation & Infrastructure)** and **SDG 11 (Sustainable Cities & Communities)** by leveraging technology to build smarter, safer, and more inclusive communities.
 
