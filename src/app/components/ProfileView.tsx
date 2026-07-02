@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { CheckCircle, Bell, Globe, Shield, LogOut, ChevronRight, Edit2, Check, Key, Clock, ShieldAlert, Eye, EyeOff, Moon, Settings, X, Trash2, Pencil } from 'lucide-react';
+import { CheckCircle, Bell, Globe, Shield, LogOut, ChevronRight, Edit2, Check, Key, Clock, ShieldAlert, Eye, EyeOff, Settings, X, Trash2, Pencil } from 'lucide-react';
 import type { UserProfile } from '../types';
 import { PanelHeader } from './PanelHeader';
 
@@ -80,15 +80,7 @@ export function ProfileView({
   const [editMunicipality, setEditMunicipality] = useState(currentUser.municipality || '');
   const [showPassword, setShowPassword] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
   const [showSettingsPopup, setShowSettingsPopup] = useState(false);
-
-  const handleThemeToggle = () => {
-    const newDark = !isDarkMode;
-    setIsDarkMode(newDark);
-    document.documentElement.classList.toggle('dark', newDark);
-    localStorage.setItem('bb_theme', newDark ? 'dark' : 'light');
-  };
 
   const handleSave = () => {
     setSaving(true);
@@ -277,12 +269,6 @@ export function ProfileView({
 
                   {/* Theme & Language */}
                   <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-                    <SettingsRow
-                      Icon={Moon}
-                      label={tx.darkMode}
-                      value={isDarkMode ? tx.on : tx.off}
-                      onClick={handleThemeToggle}
-                    />
                     <SettingsRow
                       Icon={Globe}
                       label={tx.language}
@@ -486,12 +472,6 @@ export function ProfileView({
 
             {/* Other settings */}
             <div className="bg-white/80 backdrop-blur-md border border-[#47B3E8]/20 rounded-3xl mb-4 shadow-sm overflow-hidden divide-y divide-[#47B3E8]/10">
-              <SettingsRow
-                Icon={Moon}
-                label={tx.darkMode}
-                value={isDarkMode ? tx.on : tx.off}
-                onClick={handleThemeToggle}
-              />
               <SettingsRow
                 Icon={Globe}
                 label={tx.language}
