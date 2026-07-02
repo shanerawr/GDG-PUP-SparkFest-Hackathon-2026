@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Plus, Pencil, Trash2, FileText, MapPin, MoreHorizontal, PieChart, CheckCircle, Clock, RefreshCw } from 'lucide-react';
+import { Plus, Pencil, Trash2, FileText, MapPin, MoreHorizontal, PieChart, CheckCircle, Clock, RefreshCw, Filter, ArrowUpDown, Eye } from 'lucide-react';
 import { LandscapeThumb } from './LandscapeThumb';
 import { PanelHeader } from './PanelHeader';
 import { matchMunicipality } from '../utils/municipalityMatcher';
 import type { UserReport, UserProfile, MapPin as MapPinType } from '../types';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface Props {
   reports: UserReport[];
@@ -16,17 +17,15 @@ interface Props {
   onStatusChange?: (pinId: string, newStatus: string) => void;
   onCategoryChange?: (pinId: string, newCategory: string) => void;
   onVerificationChange?: (pinId: string, newVerification: string) => void;
+  onViewReport?: (pinId: string) => void;
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const labelMap: Record<string, string> = {
-    unresolved: 'Unresolved',
-    'pending-resolution': 'Pending Resolution',
-    resolved: 'Resolved',
-    pending: 'Unresolved',
-    'in-progress': 'Pending Resolution',
-    acknowledged: 'Pending Resolution',
-  };
+  const { t } = useLanguage();
+  let labelKey = 'unresolved';
+  if (status === 'pending-resolution' || status === 'in-progress' || status === 'acknowledged') labelKey = 'pendingResolution';
+  else if (status === 'resolved') labelKey = 'resolved';
+  const displayStatus = (t.reports as any)[labelKey] || t.reports.unresolved;
 
   const colorMap: Record<string, { bg: string; text: string; border: string }> = {
     unresolved: { bg: '#fee2e2', text: '#b91c1c', border: '#fca5a5' },
@@ -37,7 +36,6 @@ function StatusBadge({ status }: { status: string }) {
     acknowledged: { bg: '#fff7ed', text: '#ea580c', border: '#fed7aa' },
   };
 
-  const displayStatus = labelMap[status] || 'Unresolved';
   const colors = colorMap[status] || colorMap['unresolved'];
 
   return (
@@ -58,6 +56,7 @@ function ReportCard({
   onStatusChange,
   onCategoryChange,
   onVerificationChange,
+  onViewReport,
 }: {
   report: UserReport & { reportedBy?: string; pinId?: string; type?: string };
   currentUser: UserProfile;
@@ -66,7 +65,9 @@ function ReportCard({
   onStatusChange?: (pinId: string, newStatus: string) => void;
   onCategoryChange?: (pinId: string, newCategory: string) => void;
   onVerificationChange?: (pinId: string, newVerification: string) => void;
+  onViewReport?: (pinId: string) => void;
 }) {
+  const { t } = useLanguage();
   const title = report.title || report.typeName;
   const desc = report.description || report.moreDetails;
   const imageUrl = report.photos && report.photos.length > 0 ? report.photos[0] : null;
@@ -132,9 +133,9 @@ function ReportCard({
                    borderColor: safeStatus === 'unresolved' ? '#fca5a5' : safeStatus === 'pending-resolution' ? '#fed7aa' : '#bbf7d0'
                 }}
               >
-                <option value="unresolved" className="text-red-700 font-bold bg-white">Unresolved</option>
-                <option value="pending-resolution" className="text-amber-600 font-bold bg-white">Pending Resolution</option>
-                <option value="resolved" className="text-green-600 font-bold bg-white">Resolved</option>
+                <option value="unresolved" className="text-red-700 font-bold bg-white">{t.reports.unresolved}</option>
+                <option value="pending-resolution" className="text-amber-600 font-bold bg-white">{t.reports.pendingResolution}</option>
+                <option value="resolved" className="text-green-600 font-bold bg-white">{t.reports.resolved}</option>
               </select>
             ) : (
               <StatusBadge status={report.status} />
@@ -151,9 +152,9 @@ function ReportCard({
                    borderColor: (report.verificationStatus || 'pending') === 'pending' ? '#fde68a' : (report.verificationStatus === 'verified' ? '#bbf7d0' : '#fca5a5')
                 }}
               >
-                <option value="pending" className="text-amber-600 font-bold bg-white">Pending Verification</option>
-                <option value="verified" className="text-green-600 font-bold bg-white">Verified</option>
-                <option value="rejected" className="text-red-600 font-bold bg-white">Rejected</option>
+                <option value="pending" className="text-amber-600 font-bold bg-white">{t.reports.pendingVerification}</option>
+                <option value="verified" className="text-green-600 font-bold bg-white">{t.reports.verified}</option>
+                <option value="rejected" className="text-red-600 font-bold bg-white">{t.reports.rejected}</option>
               </select>
             ) : (report.verificationStatus === 'verified' || report.verificationStatus === 'rejected') ? (
                 <span 
@@ -164,17 +165,22 @@ function ReportCard({
                     borderColor: report.verificationStatus === 'verified' ? '#bbf7d0' : '#fca5a5'
                   }}
                 >
-                  {report.verificationStatus === 'verified' ? 'Verified' : 'Rejected'}
+                  {report.verificationStatus === 'verified' ? t.reports.verified : t.reports.rejected}
                 </span>
             ) : (
                 <span 
                   className="flex-shrink-0 text-[10px] font-bold rounded-full px-2 py-0.5 border bg-amber-50 text-amber-600 border-amber-200"
                 >
-                  Unverified
+                  {t.reports.unverified}
                 </span>
             )}
           </div>
           <div className="flex items-center flex-shrink-0 gap-1">
+            {onViewReport && (
+              <button onClick={() => onViewReport(report.pinId || report.id)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer" title="View on map">
+                <Eye size={16} />
+              </button>
+            )}
             {canEdit && (
               <button onClick={onEdit} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer" title="Edit">
                 <Pencil size={16} />
@@ -225,7 +231,9 @@ export function ReportsView({
   onStatusChange,
   onCategoryChange,
   onVerificationChange,
+  onViewReport,
 }: Props) {
+  const { t } = useLanguage();
   const isAdmin = currentUser?.role === 'admin';
   const isResponder = currentUser?.role === 'lgu' || currentUser?.role === 'authority';
   const isCitizen = !isAdmin && !isResponder;
@@ -236,6 +244,8 @@ export function ReportsView({
   ))?.toLowerCase();
 
   const [activeTab, setActiveTab] = useState<'my-reports' | 'summary'>('my-reports');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<string>('newest');
 
   const filteredReports = reports.filter(r => {
     if (isAdmin) return true;
@@ -281,6 +291,28 @@ export function ReportsView({
     return true; // Citizens see their own
   });
 
+  const processedReports = filteredReports.filter(r => {
+    if (filterStatus === 'all') return true;
+    const safeStatus = (r.status === 'pending' || r.status === 'pending-approval') ? 'unresolved' :
+                       (r.status === 'acknowledged' || r.status === 'in-progress') ? 'pending-resolution' :
+                       r.status || 'unresolved';
+    return safeStatus === filterStatus;
+  }).sort((a, b) => {
+    let timeA = new Date((a as any).createdAt || 0).getTime();
+    if (!(a as any).createdAt && (a as any).date) {
+      timeA = new Date(`${(a as any).date} ${(a as any).time || ''}`).getTime();
+    }
+    if (isNaN(timeA)) timeA = 0;
+
+    let timeB = new Date((b as any).createdAt || 0).getTime();
+    if (!(b as any).createdAt && (b as any).date) {
+      timeB = new Date(`${(b as any).date} ${(b as any).time || ''}`).getTime();
+    }
+    if (isNaN(timeB)) timeB = 0;
+
+    return sortBy === 'newest' ? timeB - timeA : timeA - timeB;
+  });
+
   // Compute Summary Statistics
   const userMuni = currentUser?.municipality?.toLowerCase().trim();
   const summaryPins = isCitizen && userMuni
@@ -300,7 +332,7 @@ export function ReportsView({
       style={{ background: '#F5F0C0' }}
     >
       {/* Header */}
-      <PanelHeader title={isAdmin || isResponder ? "Reports" : "Citizen Reports"} onBack={onBack} />
+      <PanelHeader title={isAdmin || isResponder ? t.reports.title : t.reports.citizenReports} onBack={onBack} />
 
       {/* Tabs for Citizens */}
       {isCitizen && (
@@ -309,13 +341,13 @@ export function ReportsView({
             onClick={() => setActiveTab('my-reports')}
             className={`flex-1 py-2 rounded-xl text-[13px] font-bold transition-all ${activeTab === 'my-reports' ? 'bg-[#47B3E8] text-white shadow-md' : 'bg-white/50 text-gray-500 hover:bg-white/80'}`}
           >
-            My Reports
+            {t.reports.myReports}
           </button>
           <button
             onClick={() => setActiveTab('summary')}
             className={`flex-1 py-2 rounded-xl text-[13px] font-bold transition-all flex items-center justify-center gap-1.5 ${activeTab === 'summary' ? 'bg-[#47B3E8] text-white shadow-md' : 'bg-white/50 text-gray-500 hover:bg-white/80'}`}
           >
-            <PieChart size={14} /> Report Summary
+            <PieChart size={14} /> {t.reports.summary}
           </button>
         </div>
       )}
@@ -323,33 +355,63 @@ export function ReportsView({
       {/* List / Dashboard */}
       <div className="flex-1 overflow-y-auto px-4 pb-28">
         {activeTab === 'my-reports' || isAdmin || isResponder ? (
-          filteredReports.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-center py-16">
-              <div
-                className="w-16 h-16 rounded-2xl flex items-center justify-center mb-3"
-                style={{ background: '#FFF9C4' }}
-              >
-                <LandscapeThumb className="w-10 h-10 rounded-lg" />
+          <>
+            <div className="flex gap-2 mb-4 bg-white/40 p-2 rounded-xl backdrop-blur-sm border border-white/50 shadow-sm animate-in fade-in slide-in-from-top-2">
+              <div className="flex-1 flex items-center bg-white rounded-lg px-2 border border-gray-100">
+                <Filter size={14} className="text-gray-400 mr-1.5" />
+                <select
+                  value={filterStatus}
+                  onChange={e => setFilterStatus(e.target.value)}
+                  className="flex-1 bg-transparent text-[12px] font-bold text-gray-700 py-2 outline-none cursor-pointer"
+                >
+                  <option value="all">{t.reports.allStatuses}</option>
+                  <option value="unresolved">{t.reports.unresolved}</option>
+                  <option value="pending-resolution">{t.reports.pendingResolution}</option>
+                  <option value="resolved">{t.reports.resolved}</option>
+                </select>
               </div>
-              <p className="text-[14px] font-bold text-gray-500">No reports yet</p>
-              <p className="text-[12px] text-gray-400 mt-1">
-                {isAdmin || isResponder ? "There are no reports submitted in the system for your department." : "Tap + to submit your first hazard report"}
-              </p>
+              <div className="flex-1 flex items-center bg-white rounded-lg px-2 border border-gray-100">
+                <ArrowUpDown size={14} className="text-gray-400 mr-1.5" />
+                <select
+                  value={sortBy}
+                  onChange={e => setSortBy(e.target.value)}
+                  className="flex-1 bg-transparent text-[12px] font-bold text-gray-700 py-2 outline-none cursor-pointer"
+                >
+                  <option value="newest">{t.reports.newestFirst}</option>
+                  <option value="oldest">{t.reports.oldestFirst}</option>
+                </select>
+              </div>
             </div>
-          ) : (
-            filteredReports.map((r) => (
-              <ReportCard
-                key={r.id}
-                report={r}
-                currentUser={currentUser}
-                onEdit={() => onEditReport(r)}
-                onDelete={() => onDeleteReport(r)}
-                onStatusChange={onStatusChange}
-                onCategoryChange={onCategoryChange}
-                onVerificationChange={onVerificationChange}
-              />
-            ))
-          )
+
+            {processedReports.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-center py-16">
+                <div
+                  className="w-16 h-16 rounded-2xl flex items-center justify-center mb-3"
+                  style={{ background: '#FFF9C4' }}
+                >
+                  <LandscapeThumb className="w-10 h-10 rounded-lg" />
+                </div>
+                <p className="text-[14px] font-bold text-gray-500">{t.reports.noReportsFound}</p>
+                <p className="text-[12px] text-gray-400 mt-1">
+                  {isAdmin || isResponder ? t.reports.noReportsAdmin : t.reports.noReportsDesc}
+                </p>
+              </div>
+            ) : (
+              processedReports.map((r) => (
+                <ReportCard
+                  key={r.id}
+                  report={r}
+                  currentUser={currentUser}
+                  onEdit={() => onEditReport(r)}
+                  onDelete={() => onDeleteReport(r)}
+                  onStatusChange={onStatusChange}
+                  onCategoryChange={onCategoryChange}
+                  onVerificationChange={onVerificationChange}
+                  onViewReport={onViewReport}
+                />
+              ))
+            )}
+          </>
         ) : (
           <div className="py-2 animate-in fade-in duration-300">
             {!userMuni ? (

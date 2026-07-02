@@ -456,6 +456,13 @@ export default function App() {
                   fetchPins();
                 }).catch(console.error);
               }}
+              onViewReport={(pinId) => {
+                const pin = pins.find(p => p.id === pinId);
+                if (pin) {
+                  setActivePanel(null);
+                  setDetailPin(pin);
+                }
+              }}
             />
           )}
           {activePanel === 'profile' && currentUser && (

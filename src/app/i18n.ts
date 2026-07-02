@@ -1,0 +1,122 @@
+export const translations = {
+  en: {
+    nav: {
+      map: 'Map',
+      routes: 'Routes',
+      reports: 'Reports',
+      alerts: 'Alerts',
+      profile: 'Profile',
+      add: 'Add'
+    },
+    reports: {
+      title: 'Reports',
+      citizenReports: 'Citizen Reports',
+      myReports: 'My Reports',
+      summary: 'Report Summary',
+      noReportsFound: 'No reports found',
+      noReportsDesc: 'Tap + to submit your first hazard report',
+      noReportsAdmin: 'There are no reports matching your filters.',
+      allStatuses: 'All Statuses',
+      unresolved: 'Unresolved',
+      pendingResolution: 'Pending Resolution',
+      resolved: 'Resolved',
+      newestFirst: 'Newest First',
+      oldestFirst: 'Oldest First',
+      pendingVerification: 'Pending Verification',
+      verified: 'Verified',
+      rejected: 'Rejected',
+      unverified: 'Unverified'
+    },
+    profile: {
+      title: 'My Profile',
+      guest: 'Guest User',
+      verifiedUser: 'Verified User',
+      unverifiedUser: 'Unverified',
+      verifyNow: 'Verify Now',
+      reports: 'Reports',
+      upvotes: 'Upvotes',
+      memberSince: 'Member since',
+      theme: 'Theme',
+      language: 'Language',
+      notifications: 'Notifications',
+      pushNotifications: 'Push Notifications',
+      newPinNearby: 'New pin nearby',
+      replyReceived: 'Reply received',
+      upvotesOnPost: 'Upvotes on post',
+      helpSupport: 'Help & Support',
+      aboutApp: 'About BantayBayan',
+      logOut: 'Log Out',
+      lguDashboard: 'LGU Dashboard',
+      authorityDashboard: 'Authority Dashboard',
+      adminDashboard: 'Admin Dashboard'
+    },
+    common: {
+      cancel: 'Cancel',
+      save: 'Save',
+      delete: 'Delete',
+      edit: 'Edit',
+      back: 'Back',
+      submit: 'Submit'
+    }
+  },
+  fil: {
+    nav: {
+      map: 'Mapa',
+      routes: 'Ruta',
+      reports: 'Mga Ulat',
+      alerts: 'Alisto',
+      profile: 'Profile',
+      add: 'Mag-ulat'
+    },
+    reports: {
+      title: 'Mga Ulat',
+      citizenReports: 'Mga Ulat ng Mamamayan',
+      myReports: 'Aking Mga Ulat',
+      summary: 'Buod ng Ulat',
+      noReportsFound: 'Walang nahanap na ulat',
+      noReportsDesc: 'I-tap ang + para isumite ang unang ulat',
+      noReportsAdmin: 'Walang ulat na tumutugma sa iyong mga filter.',
+      allStatuses: 'Lahat ng Status',
+      unresolved: 'Hindi Pa Naresolba',
+      pendingResolution: 'Inaaksyunan',
+      resolved: 'Naresolba Na',
+      newestFirst: 'Pinakabago',
+      oldestFirst: 'Pinakaluma',
+      pendingVerification: 'Kasalukuyang Bine-verify',
+      verified: 'Na-verify',
+      rejected: 'Tinanggihan',
+      unverified: 'Hindi Na-verify'
+    },
+    profile: {
+      title: 'Aking Profile',
+      guest: 'Bisita',
+      verifiedUser: 'Berypikadong User',
+      unverifiedUser: 'Di-berypikado',
+      verifyNow: 'Magpa-verify',
+      reports: 'Mga Ulat',
+      upvotes: 'Upvotes',
+      memberSince: 'Miyembro simula',
+      theme: 'Tema',
+      language: 'Wika',
+      notifications: 'Notipikasyon',
+      pushNotifications: 'Push Notifications',
+      newPinNearby: 'Bagong ulat sa malapit',
+      replyReceived: 'May nag-reply',
+      upvotesOnPost: 'Upvotes sa post',
+      helpSupport: 'Tulong at Suporta',
+      aboutApp: 'Tungkol sa BantayBayan',
+      logOut: 'Mag-Log Out',
+      lguDashboard: 'Dashboard ng LGU',
+      authorityDashboard: 'Dashboard ng Awtoridad',
+      adminDashboard: 'Dashboard ng Admin'
+    },
+    common: {
+      cancel: 'Kanselahin',
+      save: 'I-save',
+      delete: 'Burahin',
+      edit: 'I-edit',
+      back: 'Bumalik',
+      submit: 'Isumite'
+    }
+  }
+};
