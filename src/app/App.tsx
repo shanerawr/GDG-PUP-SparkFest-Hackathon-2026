@@ -363,6 +363,7 @@ export default function App() {
           {activePanel === 'notifications' && (
             <NotificationsPanel
               notifications={notifications}
+              pins={pins}
               onMarkAllRead={handleMarkAllRead}
               onDeleteNotif={handleDeleteNotif}
               onBack={() => setActivePanel(null)}

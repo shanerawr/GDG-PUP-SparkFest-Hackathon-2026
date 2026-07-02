@@ -1,11 +1,12 @@
-import { BellOff, X } from 'lucide-react';
-import type { AppNotification } from '../types';
+import { BellOff, X, MessageSquare, Heart, Shield } from 'lucide-react';
+import type { AppNotification, MapPin } from '../types';
 import { LandscapeThumb } from './LandscapeThumb';
 import { PanelHeader } from './PanelHeader';
 import { formatTimeAgo } from '../utils/time';
 
 interface Props {
   notifications: AppNotification[];
+  pins?: MapPin[];
   onMarkAllRead: () => void;
   onDeleteNotif: (id: string) => void;
   onBack: () => void;
@@ -14,11 +15,53 @@ interface Props {
 
 function NotifItem({
   n,
+  pins,
   onClick,
 }: {
   n: AppNotification;
+  pins?: MapPin[];
   onClick: () => void;
 }) {
+  // Resolve corresponding report/pin thumbnail if pinId is present
+  let imageContent = null;
+  const relatedPin = n.pinId && pins ? pins.find(p => p.id === n.pinId) : null;
+
+  if (relatedPin && (relatedPin.photo || (relatedPin.photos && relatedPin.photos.length > 0))) {
+    const photoUrl = relatedPin.photo || relatedPin.photos[0];
+    imageContent = (
+      <img
+        src={photoUrl}
+        alt="Report thumbnail"
+        className="w-14 h-14 rounded-xl object-cover flex-shrink-0 border border-slate-100 shadow-sm animate-in fade-in duration-200"
+      />
+    );
+  } else {
+    // Beautiful icon-based indicators instead of generic placeholder
+    if (n.type === 'reply') {
+      imageContent = (
+        <div className="w-14 h-14 rounded-xl flex-shrink-0 flex items-center justify-center bg-blue-50 text-blue-500 border border-blue-100 shadow-sm">
+          <MessageSquare size={22} />
+        </div>
+      );
+    } else if (n.type === 'upvote') {
+      imageContent = (
+        <div className="w-14 h-14 rounded-xl flex-shrink-0 flex items-center justify-center bg-rose-50 text-rose-500 border border-rose-100 shadow-sm">
+          <Heart size={22} fill="currentColor" />
+        </div>
+      );
+    } else if (n.title.toLowerCase().includes('verified') || n.title.toLowerCase().includes('verification')) {
+      imageContent = (
+        <div className="w-14 h-14 rounded-xl flex-shrink-0 flex items-center justify-center bg-emerald-50 text-emerald-500 border border-emerald-100 shadow-sm">
+          <Shield size={22} />
+        </div>
+      );
+    } else {
+      imageContent = (
+        <LandscapeThumb className="w-14 h-14 rounded-xl flex-shrink-0 border border-slate-100 shadow-sm" />
+      );
+    }
+  }
+
   return (
     <div className="px-4 py-1.5">
       <div
@@ -26,8 +69,7 @@ function NotifItem({
         className="flex items-center gap-3 rounded-2xl px-3.5 py-3 cursor-pointer active:opacity-80 transition-opacity bg-white border border-gray-100 shadow-sm"
         style={{ opacity: n.isNew ? 1 : 0.65 }}
       >
-        {/* Thumbnail */}
-        <LandscapeThumb className="w-14 h-14 rounded-xl flex-shrink-0" />
+        {imageContent}
 
         {/* Text */}
         <div className="flex-1 min-w-0">
@@ -44,6 +86,7 @@ function NotifItem({
 
 export function NotificationsPanel({
   notifications,
+  pins,
   onMarkAllRead,
   onDeleteNotif,
   onBack,
@@ -83,6 +126,7 @@ export function NotificationsPanel({
             <NotifItem
               key={n.id}
               n={n}
+              pins={pins}
               onClick={() => {
                 if (n.isNew) handleMarkRead(n.id);
                 if (n.pinId && onSelectNotif) onSelectNotif(n.pinId);
