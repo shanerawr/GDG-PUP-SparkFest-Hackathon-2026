@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { CheckCircle, Bell, Globe, Shield, LogOut, ChevronRight, Edit2, Check, Key, Clock, ShieldAlert, Eye, EyeOff, Settings, X, Trash2, Pencil } from 'lucide-react';
+import { CheckCircle, Bell, Globe, Shield, LogOut, ChevronRight, Edit2, Check, Key, Clock, ShieldAlert, Eye, EyeOff, Settings, X, Trash2, Pencil, Sun, Moon } from 'lucide-react';
 import type { UserProfile } from '../types';
 import { PanelHeader } from './PanelHeader';
 
@@ -11,6 +11,8 @@ interface Props {
   onLogout: () => void;
   onStartVerification: () => void;
   onBack?: () => void;
+  theme: 'light' | 'dark';
+  onThemeToggle: () => void;
 }
 
 export function ProfileView({
@@ -19,6 +21,8 @@ export function ProfileView({
   onLogout,
   onStartVerification,
   onBack,
+  theme,
+  onThemeToggle,
 }: Props) {
   const { t, language, setLanguage } = useLanguage();
   const tx = { ...t.profile, reports_text: t.profile.reports }; // Keep tx for easy find/replace mapping, or just use t.profile
@@ -216,12 +220,18 @@ export function ProfileView({
                   </div>
 
                   {/* Theme & Language */}
-                  <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+                  <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm divide-y divide-gray-100">
                     <SettingsRow
                       Icon={Globe}
                       label={tx.language}
                       value={language === 'en' ? 'English' : 'Filipino'}
                       onClick={() => setLanguage(language === 'en' ? 'fil' : 'en')}
+                    />
+                    <SettingsRow
+                      Icon={theme === 'dark' ? Moon : Sun}
+                      label={tx.darkMode}
+                      value={theme === 'dark' ? tx.on : tx.off}
+                      onClick={onThemeToggle}
                     />
                   </div>
 
@@ -425,6 +435,12 @@ export function ProfileView({
                 label={tx.language}
                 value={language === 'en' ? 'English' : 'Filipino'}
                 onClick={() => setLanguage(language === 'en' ? 'fil' : 'en')}
+              />
+              <SettingsRow
+                Icon={theme === 'dark' ? Moon : Sun}
+                label={tx.darkMode}
+                value={theme === 'dark' ? tx.on : tx.off}
+                onClick={onThemeToggle}
               />
               <SettingsRow Icon={Shield} label={tx.privacy} />
               <SettingsRow Icon={CheckCircle} label={tx.about} />

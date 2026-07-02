@@ -90,8 +90,7 @@ function RouteCard({
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="rounded-2xl px-4 py-3.5 mb-3 border border-gray-100 shadow-sm"
-      style={{ background: '#FFFFFF' }}
+      className="bg-white rounded-2xl px-4 py-3.5 mb-3 border border-gray-100 shadow-sm"
     >
       <div className="flex items-start gap-3">
         {/* Content */}

@@ -43,6 +43,15 @@ export default function App() {
   const [pins, setPins] = useState<MapPin[]>([]);
   const [userReports, setUserReports] = useState<UserReport[]>([]);
 
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    const saved = localStorage.getItem('bb_theme');
+    return saved === 'dark' ? 'dark' : 'light';
+  });
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+  };
+
   // Load user session on mount
   useEffect(() => {
     const saved = localStorage.getItem('bb_user');
@@ -79,16 +88,15 @@ export default function App() {
     }
   }, []);
 
-  // Load and apply user theme preference on mount
+  // Synchronize and apply theme preference
   useEffect(() => {
-    const savedTheme = localStorage.getItem('bb_theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+    if (theme === 'dark') {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
     }
-  }, []);
+    localStorage.setItem('bb_theme', theme);
+  }, [theme]);
 
   const fetchPins = () => {
     fetch('/api/pins')
@@ -349,7 +357,7 @@ export default function App() {
   return (
     <div
       className="relative overflow-hidden w-full h-dvh"
-      style={{ background: '#F5F0C0' }}
+      style={theme === 'dark' ? { background: '#918a66' } : { background: '#F5F0C0' }}
     >
         {/* ── Login Overlay ── */}
         {!currentUser && (
@@ -373,6 +381,7 @@ export default function App() {
                 setDetailPin(pin);
               }}
               onClearActiveRoute={() => setActiveRoute(null)}
+              theme={theme}
             />
           </div>
 
@@ -475,6 +484,8 @@ export default function App() {
               onLogout={handleLogout}
               onStartVerification={() => setShowVerification(true)}
               onBack={() => setActivePanel(null)}
+              theme={theme}
+              onThemeToggle={toggleTheme}
             />
           )}
           {activePanel === 'verification' && currentUser && (
@@ -520,6 +531,7 @@ export default function App() {
               key="add-route"
               pins={pins}
               editRoute={editingRoute ?? undefined}
+              theme={theme}
               onClose={() => { setShowAddRoute(false); setEditingRoute(null); }}
               onSave={route => {
                 if (editingRoute) {
@@ -538,6 +550,7 @@ export default function App() {
             <AddReportModal
               key="add-report"
               initialData={editingReport ?? undefined}
+              theme={theme}
               onClose={() => { setShowAddReport(false); setEditingReport(null); }}
               onSubmit={handleAddReportSubmit}
             />

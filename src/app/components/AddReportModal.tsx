@@ -10,6 +10,7 @@ import { LocationPickerModal } from './LocationPickerModal';
 import { inferMunicipalityFromAddress } from '../utils/municipalityMatcher';
 import type { UserReport } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
+import { darkMapStyles } from './MapView';
 
 const GOOGLE_MAPS_API_KEY = 'AIzaSyB2WFoRbVp3HPXHotn27e600KWnHJZZQ80';
 
@@ -17,6 +18,7 @@ interface Props {
   onClose: () => void;
   onSubmit: (reportData: { type: string; title: string; address: string; description: string; lat: number; lng: number; photos?: string[]; radius?: number; hazardLevel?: string; municipality?: string }) => void;
   initialData?: UserReport;
+  theme?: 'light' | 'dark';
 }
 
 const getCategories = (t: any) => [
@@ -38,6 +40,7 @@ function CombinedLocationMap({
   onLocationChange,
   onRadiusChange,
   searchInputRef,
+  theme = 'light',
 }: {
   lat: number;
   lng: number;
@@ -45,6 +48,7 @@ function CombinedLocationMap({
   onLocationChange: (lat: number, lng: number, address: string) => void;
   onRadiusChange: (radius: number) => void;
   searchInputRef: React.RefObject<HTMLInputElement | null>;
+  theme?: 'light' | 'dark';
 }) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
@@ -97,6 +101,7 @@ function CombinedLocationMap({
           disableDefaultUI: true,
           gestureHandling: 'greedy',
           clickableIcons: false,
+          styles: theme === 'dark' ? darkMapStyles : undefined,
         });
 
         const circle = new google.maps.Circle({
@@ -215,7 +220,7 @@ function CombinedLocationMap({
 }
 
 /* ── Main modal ── */
-export function AddReportModal({ onClose, onSubmit, initialData }: Props) {
+export function AddReportModal({ onClose, onSubmit, initialData, theme = 'light' }: Props) {
   const { t } = useLanguage();
   const CATEGORIES = getCategories(t);
   
@@ -483,6 +488,7 @@ export function AddReportModal({ onClose, onSubmit, initialData }: Props) {
                   onLocationChange={handleLocationChange}
                   onRadiusChange={setRadius}
                   searchInputRef={searchInputRef}
+                  theme={theme}
                 />
                 {/* Show resolved address */}
                 {address ? (
@@ -591,6 +597,7 @@ export function AddReportModal({ onClose, onSubmit, initialData }: Props) {
             initialLocation={userLocation}
             initialRadius={radius}
             onClose={() => setIsMapPickerOpen(false)}
+            theme={theme}
             onConfirm={(loc, addr, rad) => {
               setUserLocation(loc);
               setAddress(addr);

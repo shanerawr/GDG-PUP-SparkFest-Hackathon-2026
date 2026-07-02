@@ -101,7 +101,7 @@ export interface UserReport {
 export type HazardFilter = 'all' | HazardLevel;
 
 export const HAZARD_COLORS: Record<HazardLevel, { bg: string; ring: string; label: string; chip: string }> = {
-  minor: { bg: '#eab308', ring: '#fef08a', label: 'Minor', chip: 'bg-yellow-100 text-yellow-800 border-yellow-300' },
+  minor: { bg: 'var(--hazard-minor)', ring: 'var(--hazard-minor-ring)', label: 'Minor', chip: 'bg-yellow-100 text-yellow-800 border-yellow-300' },
   'needs-attention': { bg: '#f97316', ring: '#fed7aa', label: 'Needs Attention', chip: 'bg-orange-100 text-orange-800 border-orange-300' },
   urgent: { bg: '#ef4444', ring: '#fecaca', label: 'Urgent', chip: 'bg-red-100 text-red-800 border-red-300' },
   'life-threatening': { bg: '#991b1b', ring: '#fca5a5', label: 'Life-Threatening', chip: 'bg-red-900/20 text-red-900 border-red-400' },

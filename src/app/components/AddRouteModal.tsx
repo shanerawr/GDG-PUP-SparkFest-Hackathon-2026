@@ -6,6 +6,7 @@ import type { SavedRoute, MapPin, HazardLevel } from '../types';
 import { HAZARD_COLORS, reportSvgPaths } from '../types';
 import { PanelHeader } from './PanelHeader';
 import { useLanguage } from '../contexts/LanguageContext';
+import { darkMapStyles } from './MapView';
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyB2WFoRbVp3HPXHotn27e600KWnHJZZQ80';
 
@@ -14,6 +15,7 @@ interface Props {
   onSave: (route: SavedRoute) => void;
   pins: MapPin[];
   editRoute?: SavedRoute;
+  theme?: 'light' | 'dark';
 }
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
@@ -98,11 +100,13 @@ function MapPicker({
   initialLatLng,
   onConfirm,
   onCancel,
+  theme = 'light',
 }: {
   label: string;
   initialLatLng?: { lat: number; lng: number };
   onConfirm: (latLng: { lat: number; lng: number }, address: string) => void;
   onCancel: () => void;
+  theme?: 'light' | 'dark';
 }) {
   const { t } = useLanguage();
   const mapRef = useRef<HTMLDivElement>(null);
@@ -160,7 +164,9 @@ function MapPicker({
         disableDefaultUI: true,
         gestureHandling: 'greedy',
         clickableIcons: false,
-        styles: [{ featureType: 'poi', elementType: 'labels', stylers: [{ visibility: 'off' }] }],
+        styles: theme === 'dark'
+          ? [...darkMapStyles, { featureType: 'poi', elementType: 'labels', stylers: [{ visibility: 'off' }] }]
+          : [{ featureType: 'poi', elementType: 'labels', stylers: [{ visibility: 'off' }] }],
       });
       mapInstanceRef.current = map;
       geocoderRef.current = new google.maps.Geocoder();
@@ -261,6 +267,7 @@ function RoutePreviewMap({
   placesReady,
   pins,
   selectedRouteIndex,
+  theme = 'light',
 }: {
   startAddress: string;
   destAddress: string;
@@ -274,6 +281,7 @@ function RoutePreviewMap({
   placesReady: boolean;
   pins: MapPin[];
   selectedRouteIndex: number;
+  theme?: 'light' | 'dark';
 }) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
@@ -298,6 +306,7 @@ function RoutePreviewMap({
         zoom: 11,
         disableDefaultUI: true,
         zoomControl: true,
+        styles: theme === 'dark' ? darkMapStyles : undefined,
       });
       mapInstanceRef.current = map;
 
@@ -460,7 +469,7 @@ function RoutePreviewMap({
 /* ─────────────────────────────────────────────────────────────
    AddRouteModal
    ───────────────────────────────────────────────────────────── */
-export function AddRouteModal({ onClose, onSave, pins, editRoute }: Props) {
+export function AddRouteModal({ onClose, onSave, pins, editRoute, theme = 'light' }: Props) {
   const { t } = useLanguage();
   const isEditMode = !!editRoute;
   const [routeName, setRouteName] = useState(editRoute?.name ?? '');
@@ -495,8 +504,6 @@ export function AddRouteModal({ onClose, onSave, pins, editRoute }: Props) {
     setOptions({ apiKey: GOOGLE_MAPS_API_KEY, version: 'weekly' });
     importLibrary('places').then(() => setPlacesReady(true));
   }, []);
-
-  const isEditMode = !!editRoute;
 
   const hasValidStart = useCurrentLocation
     ? !!currentLatLng
@@ -854,6 +861,7 @@ export function AddRouteModal({ onClose, onSave, pins, editRoute }: Props) {
                 placesReady={placesReady}
                 pins={pins}
                 selectedRouteIndex={selectedRouteIndex}
+                theme={theme}
               />
 
               {/* Route Options */}
@@ -977,6 +985,7 @@ export function AddRouteModal({ onClose, onSave, pins, editRoute }: Props) {
           <MapPicker
             key={mapPicker}
             label={mapPicker === 'start' ? t.addRoute.startPoint : t.addRoute.destination}
+            theme={theme}
             initialLatLng={
               mapPicker === 'start'
                 ? (startLatLng ?? undefined)

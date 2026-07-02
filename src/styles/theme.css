@@ -39,28 +39,30 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  --hazard-minor: #eab308;
+  --hazard-minor-ring: #fef08a;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.145 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.145 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  --background: #111318;
+  --foreground: #f4f6fa;
+  --card: #161821;
+  --card-foreground: #f4f6fa;
+  --popover: #161821;
+  --popover-foreground: #f4f6fa;
+  --primary: #1b3b8f;
+  --primary-foreground: #ffffff;
+  --secondary: #ca8a04;
+  --secondary-foreground: #ffffff;
+  --muted: #1e2533;
+  --muted-foreground: #9fb1c5;
+  --accent: #1e2533;
+  --accent-foreground: #9fb1c5;
   --destructive: oklch(0.396 0.141 25.723);
   --destructive-foreground: oklch(0.637 0.237 25.331);
-  --border: oklch(0.269 0 0);
-  --input: oklch(0.269 0 0);
-  --ring: oklch(0.439 0 0);
+  --border: #1e2533;
+  --input: #1e2533;
+  --ring: #1b3b8f;
   --font-weight-medium: 500;
   --font-weight-normal: 400;
   --chart-1: oklch(0.488 0.243 264.376);
@@ -68,14 +70,16 @@
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.269 0 0);
-  --sidebar-ring: oklch(0.439 0 0);
+  --sidebar: #111318;
+  --sidebar-foreground: #9fb1c5;
+  --sidebar-primary: #1b3b8f;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #161821;
+  --sidebar-accent-foreground: #f4f6fa;
+  --sidebar-border: #1e2533;
+  --sidebar-ring: #1b3b8f;
+  --hazard-minor: #918a66;
+  --hazard-minor-ring: rgba(145, 138, 102, 0.3);
 }
 
 @theme inline {
@@ -188,5 +192,295 @@
     font-size: var(--text-base);
     font-weight: var(--font-weight-normal);
     line-height: 1.5;
+  }
+}
+
+/* Dark Mode utility overrides for a cohesive dark layout */
+.dark {
+  .bg-white {
+    background-color: var(--card) !important;
+  }
+  .bg-white\/80 {
+    background-color: rgba(22, 24, 33, 0.8) !important;
+  }
+  .bg-white\/90 {
+    background-color: rgba(22, 24, 33, 0.9) !important;
+  }
+  .bg-white\/40 {
+    background-color: rgba(22, 24, 33, 0.4) !important;
+  }
+  .bg-slate-50 {
+    background-color: var(--background) !important;
+  }
+  .bg-gray-50 {
+    background-color: var(--background) !important;
+  }
+  .bg-gray-100 {
+    background-color: var(--card) !important;
+  }
+  .bg-gray-200 {
+    background-color: var(--border) !important;
+  }
+  .bg-gray-300 {
+    background-color: #2b3548 !important;
+  }
+  .focus\:bg-white:focus {
+    background-color: var(--card) !important;
+  }
+  
+  /* Overrides for #47B3E8 custom classes */
+  .border-\[\#47B3E8\]\/20 {
+    border-color: rgba(159, 177, 197, 0.2) !important;
+  }
+  .border-\[\#47B3E8\]\/10 {
+    border-color: rgba(159, 177, 197, 0.1) !important;
+  }
+  .bg-\[\#47B3E8\]\/10 {
+    background-color: rgba(27, 59, 143, 0.1) !important;
+  }
+  .bg-\[\#47B3E8\]\/5 {
+    background-color: rgba(27, 59, 143, 0.05) !important;
+  }
+  .bg-\[\#47B3E8\]\/25 {
+    background-color: rgba(27, 59, 143, 0.25) !important;
+  }
+  .text-\[\#47B3E8\] {
+    color: #38bdf8 !important;
+  }
+  .shadow-\[\#47B3E8\]\/20 {
+    box-shadow: 0 4px 6px -1px rgba(27, 59, 143, 0.2), 0 2px 4px -2px rgba(27, 59, 143, 0.2) !important;
+  }
+  .w-1.5.h-1.5.bg-\[\#47B3E8\]\/25 {
+    background-color: rgba(27, 59, 143, 0.25) !important;
+  }
+  .text-blue-500.text-\[\#47B3E8\] {
+    color: #38bdf8 !important;
+  }
+  
+  /* Attribute selectors for inline styles using hex/rgb blue */
+  [style*="#47B3E8"],
+  [style*="rgb(71, 179, 232)"],
+  [style*="rgb(71,179,232)"] {
+    background-color: var(--primary) !important;
+    background: var(--primary) !important;
+  }
+  [style*="color: #47B3E8"],
+  [style*="color: rgb(71, 179, 232)"],
+  [style*="color:rgb(71,179,232)"] {
+    color: var(--muted-foreground) !important;
+  }
+  
+  /* Override inline background styles for pastel yellow screens */
+  [style*="background: #F5F0C0"],
+  [style*="background:#F5F0C0"],
+  [style*="background-color: #F5F0C0"],
+  [style*="background-color:#F5F0C0"],
+  [style*="rgb(245, 240, 192)"],
+  [style*="rgb(245,240,192)"] {
+    background-color: #918a66 !important;
+    background: #918a66 !important;
+  }
+
+  /* Override inline background styles for lighter pastel yellow boxes (#FFF9C4) */
+  [style*="background: #FFF9C4"],
+  [style*="background:#FFF9C4"],
+  [style*="background-color: #FFF9C4"],
+  [style*="background-color:#FFF9C4"],
+  [style*="rgb(255, 249, 196)"],
+  [style*="rgb(255,249,196)"] {
+    background-color: rgba(145, 138, 102, 0.25) !important;
+    background: rgba(145, 138, 102, 0.25) !important;
+  }
+
+  /* Override inline background styles for pastel blue screens (#B8DCE8) and containers (#C5D8E0) */
+  [style*="background: #B8DCE8"],
+  [style*="background:#B8DCE8"],
+  [style*="background-color: #B8DCE8"],
+  [style*="background-color:#B8DCE8"],
+  [style*="rgb(184, 220, 232)"],
+  [style*="rgb(184,220,232)"],
+  [style*="background: #C5D8E0"],
+  [style*="background:#C5D8E0"],
+  [style*="background-color: #C5D8E0"],
+  [style*="background-color:#C5D8E0"],
+  [style*="rgb(197, 216, 224)"],
+  [style*="rgb(197,216,224)"] {
+    background-color: #1c2331 !important;
+    background: #1c2331 !important;
+  }
+
+  /* Override inline background styles for white elements */
+  [style*="background: white"],
+  [style*="background:white"],
+  [style*="background: #ffffff"],
+  [style*="background:#ffffff"],
+  [style*="background-color: white"],
+  [style*="background-color:white"],
+  [style*="rgb(255, 255, 255)"],
+  [style*="rgb(255,255,255)"] {
+    background-color: var(--card) !important;
+    background: var(--card) !important;
+  }
+
+  /* Travel mode selector inline styles */
+  [style*="#eff6ff"],
+  [style*="rgb(239, 246, 255)"],
+  [style*="rgb(239,246,255)"] {
+    background-color: rgba(27, 59, 143, 0.3) !important;
+    background: rgba(27, 59, 143, 0.3) !important;
+    border-color: var(--primary) !important;
+  }
+  [style*="color: #1d4ed8"],
+  [style*="color: rgb(29, 78, 216)"],
+  [style*="color:rgb(29,78,216)"] {
+    color: #9fb1c5 !important;
+  }
+  [style*="border-color: #3b82f6"],
+  [style*="border-color:#3b82f6"],
+  [style*="rgb(59, 130, 246)"] {
+    border-color: var(--primary) !important;
+  }
+
+  /* Overrides for hardcoded components */
+  .bg-\[\#F5F0C0\] {
+    background-color: #918a66 !important;
+  }
+  .bg-\[\#47B3E8\] {
+    background-color: var(--primary) !important;
+  }
+  
+  /* Overrides for other pastel/bright blues */
+  .bg-blue-50 {
+    background-color: rgba(27, 59, 143, 0.15) !important;
+  }
+  .bg-blue-100 {
+    background-color: rgba(27, 59, 143, 0.2) !important;
+  }
+  .bg-blue-50\/50 {
+    background-color: rgba(27, 59, 143, 0.08) !important;
+  }
+  .text-blue-500 {
+    color: #9fb1c5 !important;
+  }
+  .text-blue-600 {
+    color: #9fb1c5 !important;
+  }
+  .text-blue-700 {
+    color: #cbd5e1 !important;
+  }
+  .text-blue-800 {
+    color: #f4f6fa !important;
+  }
+  .text-blue-900 {
+    color: #ffffff !important;
+  }
+  .border-blue-100 {
+    border-color: rgba(27, 59, 143, 0.3) !important;
+  }
+  .border-blue-200 {
+    border-color: rgba(27, 59, 143, 0.4) !important;
+  }
+  .border-blue-500 {
+    border-color: #1b3b8f !important;
+  }
+  .hover\:text-blue-600:hover {
+    color: #cbd5e1 !important;
+  }
+  .hover\:bg-blue-50:hover {
+    background-color: rgba(27, 59, 143, 0.2) !important;
+  }
+  
+  /* Overrides for pastel yellows (hazard minor level) */
+  .bg-yellow-100 {
+    background-color: rgba(145, 138, 102, 0.2) !important;
+  }
+  .text-yellow-800 {
+    color: #fde047 !important;
+  }
+  .text-yellow-500 {
+    color: #918a66 !important;
+  }
+  .border-yellow-300 {
+    border-color: rgba(145, 138, 102, 0.4) !important;
+  }
+  
+  /* Overrides for pastel oranges (hazard attention level) */
+  .bg-orange-100 {
+    background-color: rgba(249, 115, 22, 0.2) !important;
+  }
+  .text-orange-800 {
+    color: #fed7aa !important;
+  }
+  .border-orange-300 {
+    border-color: rgba(249, 115, 22, 0.4) !important;
+  }
+
+  /* Overrides for pastel reds (hazard urgent/critical level) */
+  .bg-red-100 {
+    background-color: rgba(239, 68, 68, 0.2) !important;
+  }
+  .text-red-800 {
+    color: #fecaca !important;
+  }
+  .border-red-300 {
+    border-color: rgba(239, 68, 68, 0.4) !important;
+  }
+
+  .text-black {
+    color: var(--foreground) !important;
+  }
+  .text-slate-900 {
+    color: var(--foreground) !important;
+  }
+  .text-slate-800 {
+    color: #e2e8f0 !important;
+  }
+  .text-slate-700 {
+    color: #cbd5e1 !important;
+  }
+  .text-slate-600 {
+    color: #cbd5e1 !important;
+  }
+  .text-gray-900 {
+    color: var(--foreground) !important;
+  }
+  .text-gray-800 {
+    color: #e2e8f0 !important;
+  }
+  .text-gray-700 {
+    color: #cbd5e1 !important;
+  }
+  .text-gray-600 {
+    color: #cbd5e1 !important;
+  }
+  .text-gray-500 {
+    color: #e2e8f0 !important;
+  }
+  .text-gray-400 {
+    color: #cbd5e1 !important;
+  }
+  .placeholder-gray-400::placeholder {
+    color: #94a3b8 !important;
+  }
+  .border-gray-100 {
+    border-color: var(--border) !important;
+  }
+  .border-gray-200 {
+    border-color: var(--border) !important;
+  }
+  .border-gray-300 {
+    border-color: var(--border) !important;
+  }
+  .divide-gray-100 > :not([hidden]) ~ :not([hidden]) {
+    border-color: var(--border) !important;
+  }
+  .divide-gray-200 > :not([hidden]) ~ :not([hidden]) {
+    border-color: var(--border) !important;
+  }
+  .hover\:bg-gray-50:hover {
+    background-color: #1e2533 !important;
+  }
+  .active\:bg-gray-100:active {
+    background-color: #2b3548 !important;
   }
 }

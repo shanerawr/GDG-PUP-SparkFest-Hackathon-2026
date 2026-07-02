@@ -19,6 +19,7 @@ interface Props {
   activeRoute?: SavedRoute | null;
   onOpenDetail: (pin: MapPin) => void;
   onClearActiveRoute?: () => void;
+  theme?: 'light' | 'dark';
 }
 
 /* ── Haversine helper for marker highlighting ── */
@@ -58,7 +59,7 @@ class MapErrorBoundary extends Component<{ children: React.ReactNode }, EBState>
 }
 
 /* ── Filter Dropdown ── */
-function FilterDropdown({ filter, onChange }: { filter: HazardFilter; onChange: (f: HazardFilter) => void }) {
+function FilterDropdown({ filter, onChange, theme = 'light' }: { filter: HazardFilter; onChange: (f: HazardFilter) => void; theme?: 'light' | 'dark' }) {
   const { t } = useLanguage();
   
   const FILTERS: { key: HazardFilter; label: string }[] = [
@@ -90,7 +91,11 @@ function FilterDropdown({ filter, onChange }: { filter: HazardFilter; onChange: 
         style={
           activeColor
             ? { background: activeColor.bg, borderColor: activeColor.bg, color: 'white' }
-            : { background: 'white', borderColor: '#e5e7eb', color: '#111' }
+            : { 
+                background: theme === 'dark' ? 'var(--card)' : 'white', 
+                borderColor: theme === 'dark' ? 'var(--border)' : '#e5e7eb', 
+                color: theme === 'dark' ? 'var(--foreground)' : '#111' 
+              }
         }
       >
         <span>{t.map.filter}: {active.label}</span>
@@ -106,7 +111,7 @@ function FilterDropdown({ filter, onChange }: { filter: HazardFilter; onChange: 
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.97 }}
             transition={{ duration: 0.15 }}
-            className="absolute top-full mt-2 left-1/2 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-[1001]"
+            className="absolute top-full mt-2 left-1/2 bg-white dark:bg-[#161821] rounded-2xl shadow-xl border border-gray-100 dark:border-[#1e2533] overflow-hidden z-[1001]"
             style={{ transform: 'translateX(-50%)', minWidth: 200 }}
           >
             {FILTERS.map(f => {
@@ -114,11 +119,11 @@ function FilterDropdown({ filter, onChange }: { filter: HazardFilter; onChange: 
               const isActive = filter === f.key;
               return (
                 <button key={f.key} onClick={() => { onChange(f.key); setOpen(false); }}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-[13px] font-medium text-left hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0 cursor-pointer"
+                  className="w-full flex items-center gap-3 px-4 py-3 text-[13px] font-medium text-left hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors border-b border-gray-50 dark:border-slate-800 last:border-0 cursor-pointer text-gray-700 dark:text-gray-200"
                 >
                   <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: color ? color.bg : '#9ca3af' }} />
-                  <span className={isActive ? 'font-bold text-gray-900' : 'text-gray-700'}>{f.label}</span>
-                  {isActive && <Check size={14} className="ml-auto text-gray-900" />}
+                  <span className={isActive ? 'font-bold text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'}>{f.label}</span>
+                  {isActive && <Check size={14} className="ml-auto text-gray-900 dark:text-white" />}
                 </button>
               );
             })}
@@ -129,8 +134,31 @@ function FilterDropdown({ filter, onChange }: { filter: HazardFilter; onChange: 
   );
 }
 
+export const darkMapStyles = [
+  { elementType: "geometry", stylers: [{ color: "#212121" }] },
+  { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#757575" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#212121" }] },
+  { featureType: "administrative", elementType: "geometry", stylers: [{ color: "#757575" }] },
+  { featureType: "administrative.country", elementType: "labels.text.fill", stylers: [{ color: "#9e9e9e" }] },
+  { featureType: "administrative.land_parcel", stylers: [{ visibility: "off" }] },
+  { featureType: "administrative.locality", elementType: "labels.text.fill", stylers: [{ color: "#bdbdbd" }] },
+  { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#757575" }] },
+  { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#181818" }] },
+  { featureType: "poi.park", elementType: "labels.text.fill", stylers: [{ color: "#616161" }] },
+  { featureType: "road", elementType: "geometry.fill", stylers: [{ color: "#2c2c2c" }] },
+  { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#8a8a8a" }] },
+  { featureType: "road.arterial", elementType: "geometry", stylers: [{ color: "#373737" }] },
+  { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#3c3c3c" }] },
+  { featureType: "road.highway.controlled_access", elementType: "geometry", stylers: [{ color: "#4e4e4e" }] },
+  { featureType: "road.local", elementType: "labels.text.fill", stylers: [{ color: "#616161" }] },
+  { featureType: "transit", elementType: "labels.text.fill", stylers: [{ color: "#757575" }] },
+  { featureType: "water", elementType: "geometry", stylers: [{ color: "#000000" }] },
+  { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#3d3d3d" }] }
+];
+
 /* ── Inner map component (rendered inside error boundary) ── */
-function MapInner({ pins, activeRoute, onOpenDetail, onClearActiveRoute }: Props) {
+function MapInner({ pins, activeRoute, onOpenDetail, onClearActiveRoute, theme = 'light' }: Props) {
   const { t } = useLanguage();
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
@@ -158,6 +186,7 @@ function MapInner({ pins, activeRoute, onOpenDetail, onClearActiveRoute }: Props
           disableDefaultUI: true,
           gestureHandling: 'greedy',
           clickableIcons: false,
+          styles: theme === 'dark' ? darkMapStyles : undefined,
         });
         
         map.addListener('click', () => {
@@ -175,6 +204,15 @@ function MapInner({ pins, activeRoute, onOpenDetail, onClearActiveRoute }: Props
 
     return () => { cancelled = true; };
   }, []);
+
+  /* Dynamically toggle map styles based on theme */
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    map.setOptions({
+      styles: theme === 'dark' ? darkMapStyles : undefined
+    });
+  }, [theme, loaded]);
 
   /* Locate handler */
   const handleLocate = useCallback(() => {
@@ -408,7 +446,7 @@ function MapInner({ pins, activeRoute, onOpenDetail, onClearActiveRoute }: Props
             </svg>
             {t.map.mapLabel}
           </div>
-          <FilterDropdown filter={filter} onChange={setFilter} />
+           <FilterDropdown filter={filter} onChange={setFilter} theme={theme} />
         </div>
         {activeRoute && onClearActiveRoute && (
           <button

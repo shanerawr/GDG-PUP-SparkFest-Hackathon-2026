@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Shield, Sparkles, User, FileText, ArrowRight, LogIn, UserPlus, Key, Eye, EyeOff, MapPin } from 'lucide-react';
-import { Shield, Sparkles, User, FileText, ArrowRight, LogIn, UserPlus, Key, Eye, EyeOff, MapPin } from 'lucide-react';
 import { motion } from 'motion/react';
 import type { UserProfile } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';

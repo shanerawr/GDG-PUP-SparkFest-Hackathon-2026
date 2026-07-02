@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
 import { setOptions, importLibrary } from '@googlemaps/js-api-loader';
 import { X, Check } from 'lucide-react';
+import { darkMapStyles } from './MapView';
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "AIzaSyB2WFoRbVp3HPXHotn27e600KWnHJZZQ80";
 
@@ -10,9 +11,10 @@ interface Props {
   initialRadius?: number;
   onConfirm: (location: { lat: number, lng: number }, address: string, radius?: number) => void;
   onClose: () => void;
+  theme?: 'light' | 'dark';
 }
 
-export function LocationPickerModal({ initialLocation, initialRadius, onConfirm, onClose }: Props) {
+export function LocationPickerModal({ initialLocation, initialRadius, onConfirm, onClose, theme = 'light' }: Props) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
   const markerRef = useRef<google.maps.Marker | null>(null);
@@ -38,6 +40,7 @@ export function LocationPickerModal({ initialLocation, initialRadius, onConfirm,
         zoom: 16,
         disableDefaultUI: true,
         gestureHandling: 'greedy',
+        styles: theme === 'dark' ? darkMapStyles : undefined,
       });
       
       mapInstanceRef.current = map;
